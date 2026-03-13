@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: monitoring
+  name: demo-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: demo-app
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9898"
+      labels:
+        app: demo-app
+    spec:
+      containers:
+      - name: demo-app
+        image: stefanprodan/podinfo:latest
+        ports:
+        - containerPort: 9898
+          name: metrics
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: monitoring
+  name: demo-app
+spec:
+  selector:
+    app: demo-app
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 9898
