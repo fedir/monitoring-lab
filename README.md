@@ -15,11 +15,19 @@ The easiest way to manage the stack is using the provided `Makefile` in the `mon
 
 ```bash
 cd monitoring-stack
-make start          # Creates namespace, applies manifests, starts port-forwarding
-make checkhealth    # Checks status of pods and services
+make start          # Creates namespace, applies manifests, starts ALL port-forwards
+make generateload   # Generates HTTP traffic to demo apps
+make checkload      # Verifies data in Prometheus and Loki
 make stop           # Deletes resources (keeps namespace)
-make clean          # Deletes namespace and stops port-forwarding
+make clean          # Deletes namespace and stops all port-forwards
 ```
+
+### 2. Full Cycle Script
+For a fully automated, progressive test that cleans, starts, and verifies the stack with detailed logs:
+```bash
+./run-full-cycle.sh full
+```
+
 
 ### 2. Manual Launch
 If you prefer manual commands:
@@ -79,8 +87,9 @@ You can also verify the data manually through the Grafana UI:
 2. **Verify Data in Grafana**:
    - Open [http://localhost:3000](http://localhost:3000).
    - Go to **Explore** in the sidebar.
-   - **Metrics**: Select **Prometheus** and query `up`. You should see `demo-app`, `demo-nginx`, and `grafana`.
-   - **Logs**: Select **Loki** and query `{app="demo-app"}`.
+    - **Metrics**: Select **Prometheus** and query `up`. You should see `demo-app`, `demo-nginx`, and `grafana`.
+    - **Logs**: Select **Loki** and query `{instance=~"monitoring/demo-app.*"}` or `{job="loki.source.kubernetes.pod_logs"}`.
+
 
 ## Stop and Cleanup
 

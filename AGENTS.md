@@ -15,6 +15,7 @@ The project consists of a local Kubernetes monitoring stack:
 Before and after making changes, use the following commands to verify the system:
 - `make generateload`: Triggers traffic to demo apps to produce metrics and logs.
 - `make checkload`: Verifies the end-to-end data pipeline (Alloy -> DB -> Grafana API) by querying for metrics and logs.
+- `./run-full-cycle.sh full`: Executes a complete clean-start-test-clean cycle with progressive, detailed output. Useful for CI/CD or deep debugging.
 
 ### 1. Extending Monitoring
 When adding new services to be monitored:
@@ -43,6 +44,10 @@ To add permanent dashboards:
 
 ## Common Troubleshooting
 - **Port-forwarding fails**: Run `make clean` then `make start` to reset background processes.
+- **Namespace stuck in Terminating**: If `make clean` hangs, use the following command to force removal:
+  ```bash
+  kubectl get namespace monitoring -o json | jq '.spec.finalizers = []' | kubectl replace --raw "/api/v1/namespaces/monitoring/finalize" -f -
+  ```
 - **RBAC Errors**: Check Alloy logs (`kubectl logs -l app=alloy -n monitoring`). If you see `403 Forbidden`, update the `ClusterRole` in `alloy.yaml`.
 - **Metrics missing**: Ensure the target pod has the correct `prometheus.io/port` annotation and that the port is actually listening inside the container.
 
