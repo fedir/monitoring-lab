@@ -53,5 +53,5 @@ Dashboards are provisioned via ConfigMaps and providers.
 ## Roadmap for Future Agents
 - [x] Implement Grafana Dashboard provisioning for the Stack.
 - [ ] Add Tempo for Distributed Tracing.
-- [ ] Implement AlertManager rules for system health.
+- [x] Implement Cluster-Wide Visibility (node-exporter, kube-state-metrics).
 - [x] Add Persistent Volume support for Prometheus/Loki data.
