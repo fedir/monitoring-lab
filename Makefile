@@ -1,7 +1,7 @@
 NAMESPACE=monitoring
-MANIFESTS_DIR=.
+MANIFESTS_DIR=yaml
 
-.PHONY: start checkhealth stop clean
+.PHONY: start checkhealth stop clean test full generateload
 
 start:
 	kubectl create namespace $(NAMESPACE) --dry-run=client -o yaml | kubectl apply -f -
@@ -15,6 +15,7 @@ start:
 	@echo "Starting port-forwarding for Demo Apps (8080, 8081)..."
 	kubectl port-forward -n $(NAMESPACE) svc/demo-app 8080:80 > /dev/null 2>&1 &
 	kubectl port-forward -n $(NAMESPACE) svc/demo-nginx 8081:80 > /dev/null 2>&1 &
+	@sleep 5
 
 generateload:
 	@echo "📈 Generating traffic to demo apps..."
@@ -29,6 +30,16 @@ generateload:
 checkload:
 	@./test-stack.sh
 
+test: checkload
+
+full:
+	$(MAKE) clean
+	$(MAKE) start
+	@echo "Waiting for metrics to be collected..."
+	@sleep 20
+	$(MAKE) test
+	$(MAKE) clean
+
 checkhealth:
 	@echo "Checking status of pods in $(NAMESPACE) namespace:"
 	kubectl get pods -n $(NAMESPACE)
@@ -39,6 +50,10 @@ stop:
 	kubectl delete -f $(MANIFESTS_DIR)/
 
 clean:
-	kubectl delete namespace $(NAMESPACE)
-	@echo "Stopping any background port-forwarding..."
+	@echo ">> Removing namespace: $(NAMESPACE) (if exists)"
+	-kubectl delete namespace $(NAMESPACE) --ignore-not-found
+	@echo ">> Killing any existing port-forwards"
 	-pkill -f "kubectl port-forward"
+	@echo "Waiting for namespace to be fully removed..."
+	@while kubectl get ns $(NAMESPACE) >/dev/null 2>&1; do sleep 2; done
+	@echo "✅ Environment cleaned."

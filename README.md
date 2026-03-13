@@ -33,7 +33,7 @@ For a fully automated, progressive test that cleans, starts, and verifies the st
 If you prefer manual commands:
 ```bash
 kubectl create namespace monitoring
-kubectl apply -f monitoring-stack/
+kubectl apply -f yaml/
 ```
 
 
@@ -96,7 +96,7 @@ You can also verify the data manually through the Grafana UI:
 ### Stop the Stack (Delete Resources)
 To remove the monitoring stack but keep the namespace:
 ```bash
-kubectl delete -f monitoring-stack/
+kubectl delete -f yaml/
 ```
 
 ### Full Cleanup

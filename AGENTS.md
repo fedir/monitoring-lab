@@ -29,7 +29,7 @@ When adding new services to be monitored:
 
 ### 2. Modifying Alloy Configuration
 Alloy uses a `.alloy` configuration file stored in a `ConfigMap`.
-- **Location**: `monitoring-stack/alloy.yaml`
+- **Location**: `yaml/alloy.yaml`
 - **Pattern**: 
   - `discovery.kubernetes` for finding resources.
   - `discovery.relabel` for filtering/relabeling.
@@ -48,7 +48,7 @@ To add permanent dashboards:
   ```bash
   kubectl get namespace monitoring -o json | jq '.spec.finalizers = []' | kubectl replace --raw "/api/v1/namespaces/monitoring/finalize" -f -
   ```
-- **RBAC Errors**: Check Alloy logs (`kubectl logs -l app=alloy -n monitoring`). If you see `403 Forbidden`, update the `ClusterRole` in `alloy.yaml`.
+- **RBAC Errors**: Check Alloy logs (`kubectl logs -l app=alloy -n monitoring`). If you see `403 Forbidden`, update the `ClusterRole` in `yaml/alloy.yaml`.
 - **Metrics missing**: Ensure the target pod has the correct `prometheus.io/port` annotation and that the port is actually listening inside the container.
 
 ## Roadmap for Future Agents
