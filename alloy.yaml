@@ -37,6 +37,7 @@ subjects:
 apiVersion: v1
 kind: ConfigMap
 metadata:
+  namespace: monitoring
   name: alloy-config
 data:
   config.alloy: |
@@ -122,6 +123,7 @@ data:
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
+  namespace: monitoring
   name: alloy
 spec:
   selector:
