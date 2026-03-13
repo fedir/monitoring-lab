@@ -54,4 +54,4 @@ Dashboards are provisioned via ConfigMaps and providers.
 - [x] Implement Grafana Dashboard provisioning for the Stack.
 - [ ] Add Tempo for Distributed Tracing.
 - [ ] Implement AlertManager rules for system health.
-- [ ] Add Persistent Volume support for Prometheus/Loki data.
+- [x] Add Persistent Volume support for Prometheus/Loki data.
