@@ -46,13 +46,13 @@ data:
       format = "logfmt"
     }
 
-    // Discover Kubernetes pods for metrics
+    // Discover Kubernetes pods
     discovery.kubernetes "pods" {
       role = "pod"
     }
 
-    // Filter targets based on prometheus.io annotations
-    discovery.relabel "kubernetes_pods" {
+    // Filter and relabel targets for metrics
+    discovery.relabel "metrics_pods" {
       targets = discovery.kubernetes.pods.targets
 
       rule {
@@ -83,20 +83,43 @@ data:
 
       rule {
         source_labels = ["__meta_kubernetes_namespace"]
-        action        = "replace"
         target_label  = "namespace"
       }
 
       rule {
         source_labels = ["__meta_kubernetes_pod_name"]
-        action        = "replace"
         target_label  = "pod"
       }
     }
 
-    // Scrape metrics from filtered pods
+    // Relabel targets for logs (no filtering, just labels)
+    discovery.relabel "logs_pods" {
+      targets = discovery.kubernetes.pods.targets
+
+      rule {
+        source_labels = ["__meta_kubernetes_namespace"]
+        target_label  = "namespace"
+      }
+
+      rule {
+        source_labels = ["__meta_kubernetes_pod_name"]
+        target_label  = "pod"
+      }
+
+      rule {
+        source_labels = ["__meta_kubernetes_pod_container_name"]
+        target_label  = "container"
+      }
+
+      rule {
+        source_labels = ["__meta_kubernetes_pod_label_app"]
+        target_label  = "app"
+      }
+    }
+
+    // Scrape metrics
     prometheus.scrape "kubernetes_pods" {
-      targets    = discovery.relabel.kubernetes_pods.output
+      targets    = discovery.relabel.metrics_pods.output
       forward_to = [prometheus.remote_write.local.receiver]
     }
 
@@ -107,9 +130,9 @@ data:
       }
     }
 
-    // Discover and collect logs from pods
+    // Collect logs from all pods
     loki.source.kubernetes "pod_logs" {
-      targets    = discovery.kubernetes.pods.targets
+      targets    = discovery.relabel.logs_pods.output
       forward_to = [loki.write.local.receiver]
     }
 
