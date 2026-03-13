@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: trace-generator
+  namespace: monitoring
+spec:
+  schedule: "*/1 * * * *"
+  successfulJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: trace-generator
+            image: curlimages/curl:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              # Generate traces every 10 seconds for a minute
+              for i in {1..6}; do
+                # Generate random hex strings
+                TRACE_ID=$(cat /dev/urandom | od -An -tx1 | tr -d ' ' | head -c 32)
+                SPAN_ID=$(cat /dev/urandom | od -An -tx1 | tr -d ' ' | head -c 16)
+                TIMESTAMP=$(date +%s)000000000
+                
+                TRACE_DATA='{"resourceSpans":[{"resource":{"attributes":[{"key":"service.name","value":{"stringValue":"demo-app"}}]},"scopeSpans":[{"spans":[{"traceId":"'"$TRACE_ID"'","spanId":"'"$SPAN_ID"'","name":"http-get","startTimeUnixNano":"'"$TIMESTAMP"'","endTimeUnixNano":"'"$TIMESTAMP"'","attributes":[{"key":"http.method","value":{"stringValue":"GET"}},{"key":"http.url","value":{"stringValue":"/api/info"}},{"key":"http.status_code","value":{"intValue":"200"}}]}]}]}]}'
+                curl -X POST http://alloy:4318/v1/traces -H "Content-Type: application/json" -d "$TRACE_DATA" 2>/dev/null
+                echo "Sent trace $i"
+                sleep 10
+              done

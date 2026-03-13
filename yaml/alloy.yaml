@@ -92,7 +92,7 @@ data:
       }
     }
 
-    // Relabel targets for logs (no filtering, just labels)
+    // Relabel targets for logs
     discovery.relabel "logs_pods" {
       targets = discovery.kubernetes.pods.targets
 
@@ -123,23 +123,51 @@ data:
       forward_to = [prometheus.remote_write.local.receiver]
     }
 
-    // Forward metrics to Prometheus service
+    // Forward metrics
     prometheus.remote_write "local" {
       endpoint {
         url = "http://prometheus:9090/api/v1/write"
       }
     }
 
-    // Collect logs from all pods
+    // Collect logs
     loki.source.kubernetes "pod_logs" {
       targets    = discovery.relabel.logs_pods.output
       forward_to = [loki.write.local.receiver]
     }
 
-    // Forward logs to Loki service
+    // Forward logs
     loki.write "local" {
       endpoint {
         url = "http://loki:3100/loki/api/v1/push"
+      }
+    }
+
+    // OTel Tracing Pipeline
+    otelcol.receiver.otlp "default" {
+      grpc {
+        endpoint = "0.0.0.0:4317"
+      }
+      http {
+        endpoint = "0.0.0.0:4318"
+      }
+      output {
+        traces = [otelcol.processor.batch.default.input]
+      }
+    }
+
+    otelcol.processor.batch "default" {
+      output {
+        traces = [otelcol.exporter.otlp.tempo.input]
+      }
+    }
+
+    otelcol.exporter.otlp "tempo" {
+      client {
+        endpoint = "tempo:4317"
+        tls {
+          insecure = true
+        }
       }
     }
 ---
@@ -169,6 +197,10 @@ spec:
           ports:
             - containerPort: 12345
               name: http
+            - containerPort: 4317
+              name: otlp-grpc
+            - containerPort: 4318
+              name: otlp-http
           volumeMounts:
             - name: config
               mountPath: /etc/alloy

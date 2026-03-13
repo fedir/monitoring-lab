@@ -6,7 +6,8 @@ This stack provides a complete monitoring solution for your Kubernetes cluster, 
 - **Grafana**: Visualization and dashboards (pre-provisioned).
 - **Prometheus**: Metrics database (with remote-write, persistence, and cluster-wide visibility).
 - **Loki**: Log aggregation system (with structured metadata and persistence).
-- **Alloy**: Grafana's OpenTelemetry-collector based agent for scraping metrics and logs from pods, nodes, and the cluster.
+- **Tempo**: Distributed tracing backend (with persistence).
+- **Alloy**: Grafana's OpenTelemetry-collector based agent for scraping metrics, logs, and traces.
 
 ## Quick Start
 
