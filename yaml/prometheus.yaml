@@ -81,6 +81,13 @@ spec:
             - "--enable-feature=remote-write-receiver"
           ports:
             - containerPort: 9090
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "1Gi"
           volumeMounts:
             - name: config
               mountPath: /etc/prometheus

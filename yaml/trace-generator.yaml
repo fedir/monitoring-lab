@@ -30,3 +30,10 @@ spec:
                 echo "Sent trace $i"
                 sleep 10
               done
+            resources:
+              requests:
+                cpu: "20m"
+                memory: "32Mi"
+              limits:
+                cpu: "100m"
+                memory: "64Mi"

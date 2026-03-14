@@ -25,6 +25,13 @@ spec:
           ports:
             - containerPort: 9100
               name: metrics
+          resources:
+            requests:
+              cpu: "20m"
+              memory: "32Mi"
+            limits:
+              cpu: "100m"
+              memory: "128Mi"
           volumeMounts:
             - name: rootfs
               mountPath: /host

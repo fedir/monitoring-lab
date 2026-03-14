@@ -22,6 +22,13 @@ spec:
         ports:
         - containerPort: 80
           name: http
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+          limits:
+            cpu: "200m"
+            memory: "128Mi"
       - name: nginx-exporter
         image: nginx/nginx-prometheus-exporter:latest
         args:
@@ -29,6 +36,13 @@ spec:
         ports:
         - containerPort: 9113
           name: metrics
+        resources:
+          requests:
+            cpu: "20m"
+            memory: "32Mi"
+          limits:
+            cpu: "100m"
+            memory: "64Mi"
 ---
 apiVersion: v1
 kind: Service

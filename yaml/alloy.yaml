@@ -204,6 +204,13 @@ spec:
               name: otlp-grpc
             - containerPort: 4318
               name: otlp-http
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "300m"
+              memory: "256Mi"
           volumeMounts:
             - name: config
               mountPath: /etc/alloy

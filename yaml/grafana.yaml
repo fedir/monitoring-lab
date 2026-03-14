@@ -535,6 +535,13 @@ spec:
           image: grafana/grafana:10.4.1
           ports:
             - containerPort: 3000
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
           env:
             - name: GF_AUTH_ANONYMOUS_ENABLED
               value: "true"

@@ -151,6 +151,13 @@ spec:
           ports:
             - containerPort: 8080
               name: http
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
           volumeMounts:
             - name: app
               mountPath: /app
