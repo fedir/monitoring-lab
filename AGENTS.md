@@ -40,7 +40,17 @@ Alloy uses a `.alloy` configuration file stored in a `ConfigMap`.
 Dashboards are provisioned via ConfigMaps and providers.
 - **Provider**: `yaml/grafana.yaml` contains the `grafana-dashboards-provider` ConfigMap.
 - **Dashboard JSON**: Dashboards are embedded in `yaml/grafana.yaml` as ConfigMaps and mounted to `/var/lib/grafana/dashboards`.
+- **Alerts Dashboard**: The Alert History dashboard is provisioned under `/var/lib/grafana/dashboards/alerts` and shows a quick link to the webhook UI.
 - **Datasources**: Use fixed UIDs (`prometheus`, `loki`) in provisioning to ensure dashboards work immediately.
+
+### 4. Alerting & Notifications
+Alerting is handled by Prometheus + Alertmanager, and Grafana alerting is provisioned to the same webhook receiver.
+- **Alertmanager**: `yaml/alertmanager.yaml`
+- **Prometheus rules**: `yaml/prometheus.yaml` (`rules.yml`)
+- **Webhook receiver**: `yaml/webhook-receiver.yaml`
+- **Grafana alerting provisioning**: `yaml/grafana.yaml` (`/etc/grafana/provisioning/alerting`)
+- **Verification**: Scale a demo app to zero replicas and confirm alert history at the webhook UI.
+- **ServiceDown rule**: Based on `kube-state-metrics` deployment/daemonset availability metrics to catch scaled-to-zero workloads quickly.
 
 ## Common Troubleshooting
 - **Port-forwarding fails**: Run `make clean` then `make start` to reset background processes.
@@ -49,6 +59,7 @@ Dashboards are provisioned via ConfigMaps and providers.
   kubectl get namespace monitoring -o json | jq '.spec.finalizers = []' | kubectl replace --raw "/api/v1/namespaces/monitoring/finalize" -f -
   ```
 - **Loki "No data"**: Ensure Alloy is labeling logs correctly. Check `discovery.relabel` for logs in `yaml/alloy.yaml`.
+- **Alerts not firing**: Confirm Prometheus has loaded rules and Alertmanager is reachable from Prometheus (`alertmanager:9093`).
 
 ## Roadmap for Future Agents
 - [x] Implement Grafana Dashboard provisioning for the Stack.

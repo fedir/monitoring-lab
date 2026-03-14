@@ -182,6 +182,9 @@ spec:
       app: alloy
   template:
     metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "12345"
       labels:
         app: alloy
     spec:

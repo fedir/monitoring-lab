@@ -1,0 +1,178 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: monitoring
+  name: alert-webhook-app
+data:
+  app.py: |
+    import json
+    import os
+    from datetime import datetime, timezone
+
+    from flask import Flask, jsonify, request
+
+    app = Flask(__name__)
+    data_file = os.environ.get("ALERTS_FILE", "/data/alerts.jsonl")
+
+
+    def _load_alerts(limit=200):
+        alerts = []
+        if not os.path.exists(data_file):
+            return alerts
+        with open(data_file, "r", encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    alerts.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+        return alerts[-limit:]
+
+
+    def _append_alerts(alerts):
+        now = datetime.now(timezone.utc).isoformat()
+        with open(data_file, "a", encoding="utf-8") as handle:
+            for alert in alerts:
+                record = {
+                    "received_at": now,
+                    "alert": alert,
+                }
+                handle.write(json.dumps(record) + "\n")
+
+
+    @app.get("/")
+    def index():
+        alerts = _load_alerts()
+        rows = []
+        for item in reversed(alerts):
+            alert = item.get("alert", {})
+            labels = alert.get("labels", {})
+            status = alert.get("status", "unknown")
+            rows.append(
+                {
+                    "received_at": item.get("received_at", ""),
+                    "alertname": labels.get("alertname", ""),
+                    "app": labels.get("app", ""),
+                    "namespace": labels.get("namespace", ""),
+                    "severity": labels.get("severity", ""),
+                    "status": status,
+                    "summary": alert.get("annotations", {}).get("summary", ""),
+                }
+            )
+        return (
+            "<html><head><title>Alert History</title></head><body>"
+            "<h2>Alert History</h2>"
+            "<table border='1' cellpadding='6' cellspacing='0'>"
+            "<tr><th>Received</th><th>Alert</th><th>App</th><th>Namespace</th><th>Severity</th><th>Status</th><th>Summary</th></tr>"
+            + "".join(
+                "<tr>"
+                f"<td>{row['received_at']}</td>"
+                f"<td>{row['alertname']}</td>"
+                f"<td>{row['app']}</td>"
+                f"<td>{row['namespace']}</td>"
+                f"<td>{row['severity']}</td>"
+                f"<td>{row['status']}</td>"
+                f"<td>{row['summary']}</td>"
+                "</tr>"
+                for row in rows
+            )
+            + "</table></body></html>"
+        )
+
+
+    @app.get("/alerts")
+    def list_alerts():
+        return jsonify(_load_alerts())
+
+
+    @app.post("/alerts")
+    def receive_alerts():
+        payload = request.get_json(silent=True)
+        if payload is None:
+            return jsonify({"status": "ignored", "reason": "no json"}), 400
+        if isinstance(payload, list):
+            alerts = payload
+        else:
+            alerts = payload.get("alerts", [payload])
+        _append_alerts(alerts)
+        return jsonify({"status": "ok", "count": len(alerts)})
+
+
+    @app.get("/healthz")
+    def healthz():
+        return jsonify({"status": "ok"})
+
+
+    if __name__ == "__main__":
+        app.run(host="0.0.0.0", port=8080)
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: monitoring
+  name: alert-webhook-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: monitoring
+  name: alert-webhook
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: alert-webhook
+  template:
+    metadata:
+      labels:
+        app: alert-webhook
+    spec:
+      containers:
+        - name: alert-webhook
+          image: python:3.12-alpine
+          command:
+            - /bin/sh
+            - -c
+          args:
+            - "pip install --no-cache-dir flask==3.0.2 && python /app/app.py"
+          env:
+            - name: ALERTS_FILE
+              value: /data/alerts.jsonl
+          ports:
+            - containerPort: 8080
+              name: http
+          volumeMounts:
+            - name: app
+              mountPath: /app
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: app
+          configMap:
+            name: alert-webhook-app
+        - name: data
+          persistentVolumeClaim:
+            claimName: alert-webhook-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: monitoring
+  name: alert-webhook
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+      name: http
+  selector:
+    app: alert-webhook

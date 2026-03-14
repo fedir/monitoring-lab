@@ -61,6 +61,14 @@ data:
       editable: true
       options:
         path: /var/lib/grafana/dashboards
+    - name: 'alerts'
+      orgId: 1
+      folder: 'Alerts'
+      type: file
+      disableDeletion: false
+      editable: true
+      options:
+        path: /var/lib/grafana/dashboards/alerts
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -325,6 +333,22 @@ data:
           ],
           "title": "Total Spans Received",
           "type": "stat"
+        },
+        {
+          "gridPos": {
+            "h": 6,
+            "w": 24,
+            "x": 0,
+            "y": 16
+          },
+          "id": 6,
+          "options": {
+            "content": "<h3>Alert History</h3>\n<p>Alerts are stored in the webhook receiver. To view history locally:</p>\n<ol><li>Port-forward: <code>kubectl port-forward -n monitoring svc/alert-webhook 8082:8080</code></li><li>Open <a href=\"http://localhost:8082\" target=\"_blank\">http://localhost:8082</a></li></ol>",
+            "mode": "html"
+          },
+          "targets": [],
+          "title": "Alert History",
+          "type": "text"
         }
       ],
       "refresh": "5s",
@@ -343,6 +367,150 @@ data:
       "uid": "stack-overview",
       "version": 1
     }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: monitoring
+  name: grafana-dashboard-alerts
+data:
+  alerts-dashboard.json: |
+    {
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": {
+              "type": "grafana",
+              "uid": "grafana"
+            },
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 0,
+      "id": 2,
+      "links": [],
+      "liveNow": false,
+      "panels": [
+        {
+          "gridPos": {
+            "h": 7,
+            "w": 24,
+            "x": 0,
+            "y": 0
+          },
+          "id": 1,
+          "options": {
+            "content": "<h2>Alert History</h2>\n<p>Alerts are stored in the webhook receiver. To view history locally:</p>\n<ol><li>Port-forward: <code>kubectl port-forward -n monitoring svc/alert-webhook 8082:8080</code></li><li>Open <a href=\"http://localhost:8082\" target=\"_blank\">http://localhost:8082</a></li></ol>",
+            "mode": "html"
+          },
+          "targets": [],
+          "title": "Alert History",
+          "type": "text"
+        }
+      ],
+      "refresh": "10s",
+      "schemaVersion": 39,
+      "style": "dark",
+      "tags": ["alerts"],
+      "templating": {
+        "list": []
+      },
+      "time": {
+        "from": "now-30m",
+        "to": "now"
+      },
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "Alert History",
+      "uid": "alert-history",
+      "version": 1
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: monitoring
+  name: grafana-alerting
+data:
+  contact-points.yaml: |
+    apiVersion: 1
+    contactPoints:
+      - orgId: 1
+        name: Alert Webhook
+        receivers:
+          - uid: alert-webhook
+            type: webhook
+            settings:
+              url: http://alert-webhook:8080/alerts
+              httpMethod: POST
+            disableResolveMessage: false
+  notification-policies.yaml: |
+    apiVersion: 1
+    policies:
+      - orgId: 1
+        receiver: Alert Webhook
+        group_by: ["alertname", "app", "namespace"]
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 2h
+  alert-rules.yaml: |
+    apiVersion: 1
+    groups:
+      - orgId: 1
+        name: grafana-rules
+        folder: Alerts
+        interval: 1m
+        rules:
+          - uid: grafana-demo-app-high-latency
+            title: Demo App High Latency (Grafana)
+            condition: C
+            data:
+              - refId: A
+                datasourceUid: prometheus
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                model:
+                  expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{app="demo-app"}[5m])) by (le))
+                  intervalMs: 1000
+                  maxDataPoints: 43200
+              - refId: B
+                datasourceUid: __expr__
+                model:
+                  type: reduce
+                  expression: A
+                  reducer: "last"
+              - refId: C
+                datasourceUid: __expr__
+                model:
+                  type: classic_conditions
+                  conditions:
+                    - evaluator:
+                        type: gt
+                        params: [0.5]
+                      operator:
+                        type: and
+                      query:
+                        params: [B]
+                      reducer:
+                        type: last
+                      type: query
+            for: 5m
+            annotations:
+              summary: High latency on demo-app
+            labels:
+              severity: warning
+            noDataState: NoData
+            execErrState: Error
+            isPaused: false
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -379,6 +547,10 @@ spec:
               mountPath: /etc/grafana/provisioning/dashboards
             - name: dashboards
               mountPath: /var/lib/grafana/dashboards
+            - name: dashboards-alerts
+              mountPath: /var/lib/grafana/dashboards/alerts
+            - name: alerting
+              mountPath: /etc/grafana/provisioning/alerting
       volumes:
         - name: datasources
           configMap:
@@ -389,6 +561,12 @@ spec:
         - name: dashboards
           configMap:
             name: grafana-dashboard-demo
+        - name: dashboards-alerts
+          configMap:
+            name: grafana-dashboard-alerts
+        - name: alerting
+          configMap:
+            name: grafana-alerting
 ---
 apiVersion: v1
 kind: Service

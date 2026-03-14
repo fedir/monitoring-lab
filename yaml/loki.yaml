@@ -36,11 +36,16 @@ metadata:
   name: loki
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: loki
   template:
     metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3100"
       labels:
         app: loki
     spec:

@@ -54,11 +54,16 @@ metadata:
   name: tempo
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: tempo
   template:
     metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "3200"
       labels:
         app: tempo
     spec:
