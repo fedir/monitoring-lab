@@ -16,7 +16,16 @@ kubectl port-forward -n $NAMESPACE svc/demo-nginx 8081:80 > /dev/null 2>&1 &
 NGINX_PF_PID=$!
 
 # Cleanup on exit
-trap "kill $APP_PF_PID $NGINX_PF_PID; echo 'Cleanup done.'" EXIT
+cleanup() {
+    for pid in "$APP_PF_PID" "$NGINX_PF_PID"; do
+        if kill -0 "$pid" >/dev/null 2>&1; then
+            kill "$pid"
+        fi
+    done
+    echo "Cleanup done."
+}
+
+trap cleanup EXIT
 
 sleep 2 # Wait for PF to stabilize
 

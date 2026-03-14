@@ -22,10 +22,10 @@ generateload:
 	@for i in {1..20}; do \
 		curl -s http://localhost:8080 > /dev/null; \
 		curl -s http://localhost:8081 > /dev/null; \
-		echo -n "."; \
+		printf "."; \
 		sleep 0.2; \
 	done
-	@echo "\n✅ Load generation complete."
+	@printf "\n✅ Load generation complete.\n"
 
 checkload:
 	@./test-stack.sh
