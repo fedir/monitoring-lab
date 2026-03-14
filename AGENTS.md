@@ -52,6 +52,10 @@ Alerting is handled by Prometheus + Alertmanager, and Grafana alerting is provis
 - **Verification**: Scale a demo app to zero replicas and confirm alert history at the webhook UI.
 - **ServiceDown rule**: Based on `kube-state-metrics` deployment/daemonset availability metrics to catch scaled-to-zero workloads quickly.
 
+### 5. Resource Management & Security
+- **Resource limits**: All workloads define CPU/memory requests and limits in their manifests.
+- **Network policies**: `yaml/network-policy.yaml` restricts ingress to Prometheus/Loki/Tempo to Alloy and Grafana.
+
 ## Common Troubleshooting
 - **Port-forwarding fails**: Run `make clean` then `make start` to reset background processes.
 - **Namespace stuck in Terminating**: If `make clean` hangs, use:

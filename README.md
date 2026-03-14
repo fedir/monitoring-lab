@@ -11,6 +11,15 @@ This stack provides a complete monitoring solution for your Kubernetes cluster, 
 - **Alertmanager**: Alert routing and notification fan-out.
 - **Alert Webhook**: Lightweight alert history receiver with persistent storage.
 
+## Resource Management & Security
+
+### Resource Limits
+All workloads include CPU/memory requests and limits to keep the stack predictable.
+
+### Network Policies
+Ingress to Prometheus, Loki, and Tempo is restricted to Alloy and Grafana (Tempo is also allowed to reach Prometheus for remote-write).
+Policies are defined in `yaml/network-policy.yaml` and require a CNI that enforces NetworkPolicy.
+
 ## Quick Start
 
 ### 1. Using the Makefile
