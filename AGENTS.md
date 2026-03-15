@@ -86,3 +86,7 @@ Alerting is handled by Prometheus + Alertmanager, and Grafana alerting is provis
 - [x] Add Tempo for Distributed Tracing.
 - [x] Implement Cluster-Wide Visibility (node-exporter, kube-state-metrics).
 - [x] Add Persistent Volume support for Prometheus/Loki data.
+- [ ] Add per-service error rate panels and alerts (use OTEL metrics labels like `app` and `service_name`).
+- [ ] Expand trace context in dashboards (links from logs to traces in Stack Overview).
+- [ ] Add SLO dashboards for demo services (latency, availability, saturation).
+- [ ] Document podman-based tooling in troubleshooting and testing sections.
