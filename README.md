@@ -12,6 +12,82 @@ This stack provides a complete monitoring solution for your Kubernetes cluster, 
 - **Alertmanager**: Alert routing and notification fan-out.
 - **Alert Webhook**: Lightweight alert history receiver with persistent storage.
 
+## Architecture Diagram
+```mermaid
+flowchart TD
+  subgraph Apps
+    direction LR
+    DemoApp[demo-app<br/>POST /getquote]
+    DemoNginx[demo-nginx<br/>POST /getquote]
+    AlertWebhookApp[alert-webhook<br/>:8080]
+  end
+
+  subgraph Collectors
+    direction LR
+    OTelMetrics[otel-metrics<br/>OTLP HTTP :4318<br/>/v1/metrics /v1/traces]
+    Alloy[Alloy<br/>:12345]
+  end
+
+  subgraph Storage
+    direction LR
+    Prom[Prometheus<br/>:9090]
+    Loki[Loki<br/>:3100]
+    Tempo[Tempo<br/>:3200]
+  end
+
+  subgraph UI
+    direction LR
+    Grafana[Grafana<br/>:3000]
+    WebhookUI[Alert Webhook UI<br/>:8080]
+  end
+
+  subgraph Alerting
+    direction LR
+    AM[Alertmanager<br/>:9093]
+  end
+
+  DemoApp -- OTLP HTTP :4318 (metrics+spans) --> OTelMetrics
+  DemoNginx -- OTLP HTTP :4318 (metrics+spans) --> OTelMetrics
+  AlertWebhookApp -- OTLP HTTP :4318 (spans) --> OTelMetrics
+
+  OTelMetrics -- remote-write metrics /api/v1/write --> Prom
+  OTelMetrics -- forward spans OTLP HTTP :4318 --> Alloy
+  Alloy -- export spans OTLP gRPC :4317 --> Tempo
+  Alloy -- push logs HTTP :3100 --> Loki
+  Alloy -- scrape metrics --> Prom
+
+  Prom -- alerts --> AM
+  AM -- webhook /alerts (push alerts) --> WebhookUI
+  Grafana -- webhook /alerts (push alerts) --> WebhookUI
+
+  Grafana -- query metrics --> Prom
+  Grafana -- query logs --> Loki
+  Grafana -- query traces --> Tempo
+
+  subgraph PortForward
+    direction LR
+    PFGrafana[localhost:3000]
+    PFDemoApp[localhost:8080<br/>/getquote]
+    PFDemoNginx[localhost:8081<br/>/getquote]
+    PFPROM[localhost:9090]
+    PFLOKI[localhost:3100]
+    PFTEMPO[localhost:3200]
+    PFALLOY[localhost:12345]
+    PFAM[localhost:9093]
+    PFWebhook[localhost:8082]
+  end
+
+  Grafana -. pf .-> PFGrafana
+  DemoApp -. pf .-> PFDemoApp
+  DemoNginx -. pf .-> PFDemoNginx
+  Prom -. pf .-> PFPROM
+  Loki -. pf .-> PFLOKI
+  Tempo -. pf .-> PFTEMPO
+  Alloy -. pf .-> PFALLOY
+  AM -. pf .-> PFAM
+  WebhookUI -. pf .-> PFWebhook
+```
+
 ## OpenTelemetry (OTLP)
 - **Ingestion**: Apps export OTLP to `otel-metrics.monitoring:4318` (HTTP, use `/v1/metrics` and `/v1/traces`).
 - **Traces**: `demo-app`, `demo-nginx`, and `alert-webhook` ship OTLP traces to `otel-metrics`; traces are forwarded to Alloy and then to Tempo.
