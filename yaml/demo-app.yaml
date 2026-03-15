@@ -15,10 +15,31 @@ spec:
     spec:
       containers:
       - name: demo-app
-        image: stefanprodan/podinfo:latest
+        image: otel/demo:latest-quote
+        env:
+          - name: QUOTE_PORT
+            value: "8090"
+          - name: OTEL_PHP_AUTOLOAD_ENABLED
+            value: "true"
+          - name: OTEL_SERVICE_NAME
+            value: demo-app
+          - name: OTEL_RESOURCE_ATTRIBUTES
+            value: service.namespace=monitoring,app=demo-app
+          - name: OTEL_TRACES_EXPORTER
+            value: otlp
+          - name: OTEL_METRICS_EXPORTER
+            value: otlp
+          - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+            value: http://otel-metrics.monitoring:4318/v1/traces
+          - name: OTEL_EXPORTER_OTLP_TRACES_PROTOCOL
+            value: http/protobuf
+          - name: OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+            value: http://otel-metrics.monitoring:4318/v1/metrics
+          - name: OTEL_EXPORTER_OTLP_METRICS_PROTOCOL
+            value: http/protobuf
         ports:
-        - containerPort: 9898
-          name: metrics
+        - containerPort: 8090
+          name: http
         resources:
           requests:
             cpu: "50m"
@@ -26,65 +47,6 @@ spec:
           limits:
             cpu: "200m"
             memory: "128Mi"
-      - name: demo-app-otel
-        image: otel/opentelemetry-collector-contrib:0.98.0
-        args:
-          - "--config=/etc/otelcol/config.yaml"
-        resources:
-          requests:
-            cpu: "20m"
-            memory: "64Mi"
-          limits:
-            cpu: "200m"
-            memory: "128Mi"
-        volumeMounts:
-          - name: otel-config
-            mountPath: /etc/otelcol
-      volumes:
-        - name: otel-config
-          configMap:
-            name: demo-app-otel-config
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  namespace: monitoring
-  name: demo-app-otel-config
-data:
-  config.yaml: |
-    receivers:
-      prometheus:
-        config:
-          scrape_configs:
-            - job_name: demo-app
-              metrics_path: /metrics
-              static_configs:
-                - targets: ["127.0.0.1:9898"]
-    processors:
-      resource:
-        attributes:
-          - key: service.name
-            value: demo-app
-            action: insert
-          - key: service.namespace
-            value: monitoring
-            action: insert
-          - key: app
-            value: demo-app
-            action: insert
-          - key: namespace
-            value: monitoring
-            action: insert
-      batch:
-    exporters:
-      otlphttp:
-        endpoint: http://otel-metrics.monitoring:4318
-    service:
-      pipelines:
-        metrics:
-          receivers: [prometheus]
-          processors: [resource, batch]
-          exporters: [otlphttp]
 ---
 apiVersion: v1
 kind: Service
@@ -97,4 +59,4 @@ spec:
   ports:
   - protocol: TCP
     port: 80
-    targetPort: 9898
+    targetPort: 8090

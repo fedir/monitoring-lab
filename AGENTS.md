@@ -7,8 +7,9 @@ The project consists of a local Kubernetes monitoring stack:
 - **Grafana**: Visualization (Anonymous Admin access enabled).
 - **Prometheus**: Metrics storage (Remote-write enabled).
 - **Loki**: Log aggregation.
+- **Tempo**: Traces storage (OTLP ingest enabled).
 - **Alloy**: Data collection agent (configured with dynamic discovery via annotations).
-- **OTel Metrics Gateway**: OTLP metrics receiver that remote-writes to Prometheus.
+- **OTel Metrics Gateway**: OTLP receiver for app metrics and traces; remote-writes metrics to Prometheus and forwards traces to Alloy.
 
 ## Agent Workflows
 
@@ -28,7 +29,7 @@ When adding new services to be monitored:
   ```
 - **Verification**: Use `make checkhealth` and verify the target appears in Grafana Explore (`up` metric).
 
-If the service is exporting OTLP metrics instead of being scraped, ensure Alloy receives OTLP and Prometheus is used as the backend, then verify with a service-specific metric label (not `up`).
+If the service is exporting OTLP metrics instead of being scraped, send OTLP metrics to `otel-metrics` and verify with service-specific metrics (not `up`).
 
 ### 2. Modifying Alloy Configuration
 Alloy uses a `.alloy` configuration file stored in a `ConfigMap`.
@@ -40,10 +41,16 @@ Alloy uses a `.alloy` configuration file stored in a `ConfigMap`.
 - **Logs Metadata**: We use `loki.relabel` to add structured labels (`namespace`, `pod`, `container`, `app`) to all collected logs.
 
 ### 3. OpenTelemetry Instrumentation (OTLP)
-- **Collector endpoint**: Export OTLP to Alloy at `http://alloy.monitoring:4318` (HTTP) or `alloy.monitoring:4317` (gRPC).
-- **Traces**: Alloy forwards OTLP traces to Tempo; keep Prometheus/Loki ingestion unchanged for safety.
-- **Metrics**: `demo-app` and `demo-nginx` use collector sidecars to export OTLP metrics to `otel-metrics`.
-- **Example**: The `alert-webhook` deployment is auto-instrumented with OpenTelemetry and exports OTLP traces.
+- **Collector endpoints**:
+  - App metrics and traces: `otel-metrics.monitoring:4318` (OTLP HTTP, use `/v1/metrics` and `/v1/traces`).
+  - Traces forwarding: `otel-metrics` sends traces to Alloy, and Alloy forwards to Tempo.
+- **Traces**: `demo-app` and `demo-nginx` emit OTLP traces to `otel-metrics`, which forwards to Alloy and then Tempo.
+- **Metrics**: `demo-app` and `demo-nginx` emit OTLP metrics to `otel-metrics`, which remote-writes to Prometheus.
+- **Example**: The `alert-webhook` deployment is auto-instrumented and exports OTLP traces.
+
+### 3.1 Demo App Traffic
+- `demo-app` and `demo-nginx` are OTEL-instrumented quote services.
+- Generate traffic with POST `getquote` payloads (e.g., `{"numberOfItems":3}`) so traces + metrics are emitted.
 
 ### 4. Dashboard Provisioning
 Dashboards are provisioned via ConfigMaps and providers.

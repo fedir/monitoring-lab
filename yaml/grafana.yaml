@@ -186,9 +186,9 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "up",
+              "expr": "kube_deployment_status_replicas_available{namespace=\"monitoring\"}",
               "instant": false,
-              "legendFormat": "{{app}} ({{pod}})",
+              "legendFormat": "{{deployment}}",
               "range": true,
               "refId": "A"
             }
@@ -198,8 +198,18 @@ data:
         },
         {
           "datasource": {
-            "type": "tempo",
-            "uid": "tempo"
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "mappings": [],
+              "unit": "ops"
+            },
+            "overrides": []
           },
           "gridPos": {
             "h": 8,
@@ -209,20 +219,32 @@ data:
           },
           "id": 3,
           "options": {
-            "showInTable": true
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
           },
           "targets": [
             {
               "datasource": {
-                "type": "tempo",
-                "uid": "tempo"
+                "type": "prometheus",
+                "uid": "prometheus"
               },
-              "queryType": "serviceMap",
+              "editorMode": "code",
+              "expr": "sum(rate(duration_milliseconds_count{app=~\"demo-app|demo-nginx\"}[5m])) by (app)",
+              "legendFormat": "{{app}}",
+              "range": true,
               "refId": "A"
             }
           ],
-          "title": "Service Graph",
-          "type": "nodeGraph"
+          "title": "Service Activity (Traces)",
+          "type": "timeseries"
         },
         {
           "datasource": {
@@ -287,6 +309,106 @@ data:
           "fieldConfig": {
             "defaults": {
               "color": {
+                "mode": "palette-classic"
+              },
+              "mappings": [],
+              "unit": "ops"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 16
+          },
+          "id": 7,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "sum by (service) (label_replace(rate(quotes_total{app=~\"demo-app|demo-nginx\"}[5m]), \"service\", \"$1\", \"app\", \"(.*)\")) or sum by (service) (label_replace(rate(quotes_total{service_name=~\"demo-app|demo-nginx\"}[5m]), \"service\", \"$1\", \"service_name\", \"(.*)\"))",
+              "legendFormat": "{{service}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "App Request Rate",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "mappings": [],
+              "unit": "ms"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 16
+          },
+          "id": 8,
+          "options": {
+            "legend": {
+              "calcs": [],
+              "displayMode": "list",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "single",
+              "sort": "none"
+            }
+          },
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "prometheus"
+              },
+              "editorMode": "code",
+              "expr": "histogram_quantile(0.95, sum(rate(duration_milliseconds_bucket{app=~\"demo-app|demo-nginx\"}[5m])) by (le, app))",
+              "legendFormat": "{{app}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "App p95 Latency",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
                 "mode": "thresholds"
               },
               "mappings": [],
@@ -339,7 +461,7 @@ data:
             "h": 6,
             "w": 24,
             "x": 0,
-            "y": 16
+            "y": 24
           },
           "id": 6,
           "options": {
@@ -479,7 +601,7 @@ data:
                   from: 300
                   to: 0
                 model:
-                  expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{app="demo-app"}[5m])) by (le))
+                  expr: histogram_quantile(0.95, sum(rate(duration_milliseconds_bucket{app=~"demo-app|demo-nginx"}[5m])) by (le, app))
                   intervalMs: 1000
                   maxDataPoints: 43200
               - refId: B
@@ -495,7 +617,7 @@ data:
                   conditions:
                     - evaluator:
                         type: gt
-                        params: [0.5]
+                        params: [500]
                       operator:
                         type: and
                       query:
@@ -505,7 +627,7 @@ data:
                       type: query
             for: 5m
             annotations:
-              summary: High latency on demo-app
+              summary: High latency on {{ $labels.app }}
             labels:
               severity: warning
             noDataState: NoData

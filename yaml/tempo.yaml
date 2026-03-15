@@ -22,6 +22,9 @@ data:
       registry:
         external_labels:
           source: tempo
+      processor:
+        service_graphs:
+        span_metrics:
       storage:
         path: /var/tempo/generator/wal
         remote_write:

@@ -43,14 +43,14 @@ data:
             annotations:
               summary: "{{ $labels.app }} is down"
               description: "{{ $labels.app }} in namespace {{ $labels.namespace }} has been down for more than 5 seconds."
-          - alert: DemoAppHighLatency
-            expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{app="demo-app"}[5m])) by (le)) > 0.5
+          - alert: DemoServiceHighLatency
+            expr: histogram_quantile(0.95, sum(rate(duration_milliseconds_bucket{app=~"demo-app|demo-nginx"}[5m])) by (le, app)) > 500
             for: 5m
             labels:
               severity: warning
             annotations:
-              summary: "High latency on demo-app"
-              description: "p95 latency for demo-app exceeded 500ms for 5 minutes."
+              summary: "High latency on {{ $labels.app }}"
+              description: "p95 latency for {{ $labels.app }} exceeded 500ms for 5 minutes."
 ---
 apiVersion: apps/v1
 kind: Deployment

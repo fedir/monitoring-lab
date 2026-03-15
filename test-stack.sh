@@ -23,9 +23,14 @@ ensure_port_forward() {
     local local_port="$3"
     local target_port="$4"
     local health_url="$5"
+    local post_data="$6"
     local attempts=15
 
-    if curl -sf --max-time 2 "$health_url" >/dev/null; then
+    if [ -n "$post_data" ]; then
+        if curl -sf --max-time 2 -X POST -H "Content-Type: application/json" -d "$post_data" "$health_url" >/dev/null; then
+            return
+        fi
+    elif curl -sf --max-time 2 "$health_url" >/dev/null; then
         return
     fi
 
@@ -34,7 +39,11 @@ ensure_port_forward() {
 
     for i in $(seq 1 "$attempts"); do
         sleep 2
-        if curl -sf --max-time 2 "$health_url" >/dev/null; then
+        if [ -n "$post_data" ]; then
+            if curl -sf --max-time 2 -X POST -H "Content-Type: application/json" -d "$post_data" "$health_url" >/dev/null; then
+                return
+            fi
+        elif curl -sf --max-time 2 "$health_url" >/dev/null; then
             return
         fi
     done
@@ -69,8 +78,8 @@ trap cleanup EXIT
 # 1. Start Port-Forwards (if missing)
 echo "📡 Ensuring port-forwards..."
 ensure_port_forward "Grafana" "grafana" 3000 3000 "$GRAFANA_URL/api/health"
-ensure_port_forward "Demo App" "demo-app" 8080 80 "$DEMO_APP_URL"
-ensure_port_forward "Demo Nginx" "demo-nginx" 8081 80 "$NGINX_URL"
+ensure_port_forward "Demo App" "demo-app" 8080 80 "$DEMO_APP_URL/getquote" '{"numberOfItems":3}'
+ensure_port_forward "Demo Nginx" "demo-nginx" 8081 80 "$NGINX_URL/getquote" '{"numberOfItems":2}'
 ensure_port_forward "Prometheus" "prometheus" 9090 9090 "$PROM_URL/-/ready"
 ensure_port_forward "Loki" "loki" 3100 3100 "$LOKI_URL/ready"
 ensure_port_forward "Tempo" "tempo" 3200 3200 "$TEMPO_URL/ready"
@@ -81,8 +90,8 @@ ensure_port_forward "Alert Webhook" "alert-webhook" 8082 8080 "$WEBHOOK_URL/heal
 # 2. Generate Load
 echo "traffic 📈 Generating traffic to demo apps..."
 for i in {1..20}; do
-    curl -s $DEMO_APP_URL > /dev/null
-    curl -s $NGINX_URL > /dev/null
+    curl -s -X POST -H "Content-Type: application/json" -d '{"numberOfItems":3}' "$DEMO_APP_URL/getquote" > /dev/null
+    curl -s -X POST -H "Content-Type: application/json" -d '{"numberOfItems":2}' "$NGINX_URL/getquote" > /dev/null
     printf "."
     sleep 0.5
 done
@@ -114,13 +123,26 @@ if [ -z "$PROM_UID" ]; then
 else
     echo ">> Found Prometheus UID: $PROM_UID"
 fi
-echo -n ">> Querying 'process_start_time_seconds{app=\"demo-nginx\"}'... "
-METRIC_QUERY='process_start_time_seconds{app="demo-nginx"}'
+echo -n ">> Querying metrics for demo-app... "
+METRIC_QUERY='count({service_name="demo-app"})'
 RESPONSE=$(curl -s -G "$GRAFANA_URL/api/datasources/proxy/uid/$PROM_UID/api/v1/query" --data-urlencode "query=$METRIC_QUERY")
 
-if echo "$RESPONSE" | jq -e '.data.result | length > 0' > /dev/null; then
-    VAL=$(echo "$RESPONSE" | jq -r '.data.result[0].value[1]')
-    echo "✅ SUCCESS (Status: $VAL)"
+if echo "$RESPONSE" | jq -e '(.data.result // empty | length) > 0 and (try (.data.result[0].value[1] | tonumber) catch 0) > 0' > /dev/null; then
+    VAL=$(echo "$RESPONSE" | jq -r '.data.result[0].value[1] // "0"')
+    echo "✅ SUCCESS (Series: $VAL)"
+else
+    echo "❌ FAILED (No metrics found)"
+    echo "Full Response: $RESPONSE"
+    FAILURES=$((FAILURES + 1))
+fi
+
+echo -n ">> Querying metrics for demo-nginx... "
+METRIC_QUERY='count({service_name="demo-nginx"})'
+RESPONSE=$(curl -s -G "$GRAFANA_URL/api/datasources/proxy/uid/$PROM_UID/api/v1/query" --data-urlencode "query=$METRIC_QUERY")
+
+if echo "$RESPONSE" | jq -e '(.data.result // empty | length) > 0 and (try (.data.result[0].value[1] | tonumber) catch 0) > 0' > /dev/null; then
+    VAL=$(echo "$RESPONSE" | jq -r '.data.result[0].value[1] // "0"')
+    echo "✅ SUCCESS (Series: $VAL)"
 else
     echo "❌ FAILED (No metrics found)"
     echo "Full Response: $RESPONSE"
@@ -152,12 +174,19 @@ fi
 # 5. Verify Tempo traces via Prometheus
 echo -n ">> Checking Tempo spans metric... "
 TEMPO_METRIC_QUERY='sum(tempo_distributor_spans_received_total)'
-RESPONSE=$(curl -s -G "$PROM_URL/api/v1/query" --data-urlencode "query=$TEMPO_METRIC_QUERY")
+FOUND_TEMPO=0
+for i in $(seq 1 10); do
+    RESPONSE=$(curl -s -G "$PROM_URL/api/v1/query" --data-urlencode "query=$TEMPO_METRIC_QUERY")
+    if echo "$RESPONSE" | jq -e '.data.result | length > 0' > /dev/null; then
+        VALUE=$(echo "$RESPONSE" | jq -r '.data.result[0].value[1]')
+        echo "✅ SUCCESS (Value: $VALUE)"
+        FOUND_TEMPO=1
+        break
+    fi
+    sleep 2
+done
 
-if echo "$RESPONSE" | jq -e '.data.result | length > 0' > /dev/null; then
-    VALUE=$(echo "$RESPONSE" | jq -r '.data.result[0].value[1]')
-    echo "✅ SUCCESS (Value: $VALUE)"
-else
+if [ "$FOUND_TEMPO" -eq 0 ]; then
     echo "❌ FAILED (Tempo spans metric not found)"
     echo "Full Response: $RESPONSE"
     FAILURES=$((FAILURES + 1))

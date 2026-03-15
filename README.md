@@ -8,15 +8,14 @@ This stack provides a complete monitoring solution for your Kubernetes cluster, 
 - **Loki**: Log aggregation system (with structured metadata and persistence).
 - **Tempo**: Distributed tracing backend (with persistence).
 - **Alloy**: Grafana's OpenTelemetry-collector based agent for scraping metrics, logs, and traces.
-- **OTel Metrics Gateway**: OTLP metrics receiver that remote-writes to Prometheus.
+- **OTel Metrics Gateway**: OTLP receiver for app metrics and traces; remote-writes metrics to Prometheus and forwards traces to Alloy.
 - **Alertmanager**: Alert routing and notification fan-out.
 - **Alert Webhook**: Lightweight alert history receiver with persistent storage.
 
 ## OpenTelemetry (OTLP)
-- **Ingestion**: Apps export OTLP to Alloy on `http://alloy.monitoring:4318` (HTTP) or `alloy.monitoring:4317` (gRPC).
-- **Traces**: Alloy forwards OTLP traces to Tempo; Grafana links traces and logs.
-- **Metrics**: `demo-app` and `demo-nginx` ship metrics via OTLP (collector sidecars) to `otel-metrics`, which remote-writes to Prometheus.
-- **Instrumented App**: `alert-webhook` is auto-instrumented with OpenTelemetry and ships traces to Alloy.
+- **Ingestion**: Apps export OTLP to `otel-metrics.monitoring:4318` (HTTP, use `/v1/metrics` and `/v1/traces`).
+- **Traces**: `demo-app`, `demo-nginx`, and `alert-webhook` ship OTLP traces to `otel-metrics`; traces are forwarded to Alloy and then to Tempo.
+- **Metrics**: `demo-app` and `demo-nginx` emit OTLP metrics to `otel-metrics`, which remote-writes to Prometheus.
 - **Safe rollout**: Prometheus scraping and Loki log collection remain unchanged for other workloads.
 
 ## Resource Management & Security
@@ -65,11 +64,16 @@ kubectl port-forward -n monitoring svc/grafana 3000:3000
 ### 4. Provisioned Dashboards
 Grafana comes pre-configured with the **Stack Overview** dashboard.
 - URL: [http://localhost:3000/d/stack-overview/stack-overview](http://localhost:3000/d/stack-overview/stack-overview)
-- Features: Service health status (up/down) and real-time logs for the `monitoring` namespace.
+- Features: Deployment health (kube-state-metrics), app request rate + p95 latency, trace activity, and logs for the `monitoring` namespace.
 - Includes an **Alert History** panel with a quick link to the webhook UI.
 
 Grafana also includes a dedicated **Alert History** dashboard in the **Alerts** folder.
 - URL: [http://localhost:3000/d/alert-history/alert-history](http://localhost:3000/d/alert-history/alert-history)
+
+### Demo Apps
+The demo apps run OTEL-instrumented quote services.
+- `demo-app`: POST `http://localhost:8080/getquote` with JSON payload, e.g. `{"numberOfItems":3}`.
+- `demo-nginx`: POST `http://localhost:8081/getquote` with JSON payload, e.g. `{"numberOfItems":2}`.
 
 ## URLs & Credentials
 | Component | Internal URL | External Access (via PF) | Credentials |
@@ -87,7 +91,7 @@ Grafana also includes a dedicated **Alert History** dashboard in the **Alerts** 
 ## Verification & Testing
 
 ### Manual Testing in Grafana
-- **Metrics**: Select **Prometheus** and query `up`. You should see `demo-app`, `demo-nginx`, and `grafana`.
+- **Metrics**: Select **Prometheus** and query `kube_deployment_status_replicas_available{namespace="monitoring"}` or `rate(quotes_total[5m])`.
 - **Logs**: Select **Loki** and query `{namespace="monitoring"}`.
 
 ## Alerting

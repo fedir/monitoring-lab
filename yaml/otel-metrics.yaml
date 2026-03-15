@@ -10,6 +10,10 @@ data:
         protocols:
           grpc:
           http:
+    connectors:
+      spanmetrics:
+        metrics_flush_interval: 5s
+        metrics_expiration: 5m
     processors:
       batch:
     exporters:
@@ -17,12 +21,18 @@ data:
         endpoint: http://prometheus:9090/api/v1/write
         resource_to_telemetry_conversion:
           enabled: true
+      otlphttp/alloy:
+        endpoint: http://alloy.monitoring:4318
     service:
       pipelines:
         metrics:
-          receivers: [otlp]
+          receivers: [otlp, spanmetrics]
           processors: [batch]
           exporters: [prometheusremotewrite]
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [otlphttp/alloy, spanmetrics]
 ---
 apiVersion: apps/v1
 kind: Deployment

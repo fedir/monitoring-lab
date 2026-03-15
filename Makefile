@@ -30,8 +30,8 @@ start:
 generateload:
 	@echo "📈 Generating traffic to demo apps..."
 	@for i in {1..20}; do \
-		curl -s http://localhost:8080 > /dev/null; \
-		curl -s http://localhost:8081 > /dev/null; \
+		curl -s -X POST -H "Content-Type: application/json" -d '{"numberOfItems":3}' http://localhost:8080/getquote > /dev/null; \
+		curl -s -X POST -H "Content-Type: application/json" -d '{"numberOfItems":2}' http://localhost:8081/getquote > /dev/null; \
 		printf "."; \
 		sleep 0.2; \
 	done
