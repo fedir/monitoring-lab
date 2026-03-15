@@ -45,6 +45,26 @@ make clean          # Deletes namespace and stops all port-forwards
 The `curl/` folder contains one-command debug scripts to generate traffic and verify each service. Each script supports `--help` with optional overrides (host, port, query).
 - Example: `./curl/demo-app-getquote.sh --number 5`
 
+| Script | Description | Options |
+| :--- | :--- | :--- |
+| `curl/demo-app-getquote.sh` | POST quote request to demo-app. | `--number`, `--host`, `--port`, `--help` |
+| `curl/demo-nginx-getquote.sh` | POST quote request to demo-nginx. | `--number`, `--host`, `--port`, `--help` |
+| `curl/grafana-health.sh` | Grafana health check. | `--host`, `--port`, `--help` |
+| `curl/grafana-datasources.sh` | List Grafana datasources. | `--host`, `--port`, `--help` |
+| `curl/prometheus-ready.sh` | Prometheus readiness check. | `--host`, `--port`, `--help` |
+| `curl/prometheus-query-quotes.sh` | Query Prometheus quote rate. | `--host`, `--port`, `--query`, `--help` |
+| `curl/prometheus-query-latency.sh` | Query Prometheus p95 latency. | `--host`, `--port`, `--query`, `--help` |
+| `curl/prometheus-query-tempo-spans.sh` | Query Prometheus for Tempo spans received. | `--host`, `--port`, `--query`, `--help` |
+| `curl/loki-ready.sh` | Loki readiness check. | `--host`, `--port`, `--help` |
+| `curl/loki-query-demo-app.sh` | Query Loki logs for demo-app. | `--host`, `--port`, `--query`, `--help` |
+| `curl/tempo-ready.sh` | Tempo readiness check. | `--host`, `--port`, `--help` |
+| `curl/tempo-metrics.sh` | Fetch Tempo metrics. | `--host`, `--port`, `--help` |
+| `curl/alloy-metrics.sh` | Fetch Alloy metrics. | `--host`, `--port`, `--help` |
+| `curl/alertmanager-ready.sh` | Alertmanager readiness check. | `--host`, `--port`, `--help` |
+| `curl/alertmanager-send-test-alert.sh` | Send test alert to Alertmanager. | `--host`, `--port`, `--alertname`, `--severity`, `--app`, `--namespace`, `--help` |
+| `curl/alert-webhook-health.sh` | Alert webhook health check. | `--host`, `--port`, `--help` |
+| `curl/alert-webhook-alerts.sh` | Fetch alert history from webhook. | `--host`, `--port`, `--help` |
+
 ### 2. Manual Launch
 If you prefer manual commands:
 ```bash
