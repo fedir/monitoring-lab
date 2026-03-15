@@ -10,6 +10,8 @@ start:
 	kubectl wait --for=condition=ready pod -l app=grafana -n $(NAMESPACE) --timeout=60s
 	kubectl wait --for=condition=ready pod -l app=demo-app -n $(NAMESPACE) --timeout=60s
 	kubectl wait --for=condition=ready pod -l app=demo-nginx -n $(NAMESPACE) --timeout=60s
+	kubectl wait --for=condition=ready pod -l app=alert-webhook -n $(NAMESPACE) --timeout=120s
+	kubectl wait --for=condition=ready pod -l app=otel-metrics -n $(NAMESPACE) --timeout=60s
 	@echo "Starting port-forwarding for Grafana (http://localhost:3000)..."
 	kubectl port-forward -n $(NAMESPACE) svc/grafana 3000:3000 > /dev/null 2>&1 &
 	@echo "Starting port-forwarding for Demo Apps (8080, 8081)..."
@@ -44,7 +46,7 @@ full:
 	$(MAKE) clean
 	$(MAKE) start
 	@echo "Waiting for metrics to be collected..."
-	@sleep 20
+	@sleep 70
 	$(MAKE) test
 	$(MAKE) clean
 

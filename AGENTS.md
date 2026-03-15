@@ -8,6 +8,7 @@ The project consists of a local Kubernetes monitoring stack:
 - **Prometheus**: Metrics storage (Remote-write enabled).
 - **Loki**: Log aggregation.
 - **Alloy**: Data collection agent (configured with dynamic discovery via annotations).
+- **OTel Metrics Gateway**: OTLP metrics receiver that remote-writes to Prometheus.
 
 ## Agent Workflows
 
@@ -27,6 +28,8 @@ When adding new services to be monitored:
   ```
 - **Verification**: Use `make checkhealth` and verify the target appears in Grafana Explore (`up` metric).
 
+If the service is exporting OTLP metrics instead of being scraped, ensure Alloy receives OTLP and Prometheus is used as the backend, then verify with a service-specific metric label (not `up`).
+
 ### 2. Modifying Alloy Configuration
 Alloy uses a `.alloy` configuration file stored in a `ConfigMap`.
 - **Location**: `yaml/alloy.yaml`
@@ -36,14 +39,20 @@ Alloy uses a `.alloy` configuration file stored in a `ConfigMap`.
   - `prometheus.scrape` and `loki.source.kubernetes` for collection.
 - **Logs Metadata**: We use `loki.relabel` to add structured labels (`namespace`, `pod`, `container`, `app`) to all collected logs.
 
-### 3. Dashboard Provisioning
+### 3. OpenTelemetry Instrumentation (OTLP)
+- **Collector endpoint**: Export OTLP to Alloy at `http://alloy.monitoring:4318` (HTTP) or `alloy.monitoring:4317` (gRPC).
+- **Traces**: Alloy forwards OTLP traces to Tempo; keep Prometheus/Loki ingestion unchanged for safety.
+- **Metrics**: `demo-app` and `demo-nginx` use collector sidecars to export OTLP metrics to `otel-metrics`.
+- **Example**: The `alert-webhook` deployment is auto-instrumented with OpenTelemetry and exports OTLP traces.
+
+### 4. Dashboard Provisioning
 Dashboards are provisioned via ConfigMaps and providers.
 - **Provider**: `yaml/grafana.yaml` contains the `grafana-dashboards-provider` ConfigMap.
 - **Dashboard JSON**: Dashboards are embedded in `yaml/grafana.yaml` as ConfigMaps and mounted to `/var/lib/grafana/dashboards`.
 - **Alerts Dashboard**: The Alert History dashboard is provisioned under `/var/lib/grafana/dashboards/alerts` and shows a quick link to the webhook UI.
 - **Datasources**: Use fixed UIDs (`prometheus`, `loki`) in provisioning to ensure dashboards work immediately.
 
-### 4. Alerting & Notifications
+### 5. Alerting & Notifications
 Alerting is handled by Prometheus + Alertmanager, and Grafana alerting is provisioned to the same webhook receiver.
 - **Alertmanager**: `yaml/alertmanager.yaml`
 - **Prometheus rules**: `yaml/prometheus.yaml` (`rules.yml`)
@@ -52,7 +61,7 @@ Alerting is handled by Prometheus + Alertmanager, and Grafana alerting is provis
 - **Verification**: Scale a demo app to zero replicas and confirm alert history at the webhook UI.
 - **ServiceDown rule**: Based on `kube-state-metrics` deployment/daemonset availability metrics to catch scaled-to-zero workloads quickly.
 
-### 5. Resource Management & Security
+### 6. Resource Management & Security
 - **Resource limits**: All workloads define CPU/memory requests and limits in their manifests.
 - **Network policies**: `yaml/network-policy.yaml` restricts ingress to Prometheus/Loki/Tempo to Alloy and Grafana.
 

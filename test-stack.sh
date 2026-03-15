@@ -23,7 +23,7 @@ ensure_port_forward() {
     local local_port="$3"
     local target_port="$4"
     local health_url="$5"
-    local attempts=5
+    local attempts=15
 
     if curl -sf --max-time 2 "$health_url" >/dev/null; then
         return
@@ -114,8 +114,8 @@ if [ -z "$PROM_UID" ]; then
 else
     echo ">> Found Prometheus UID: $PROM_UID"
 fi
-echo -n ">> Querying 'up{app=\"demo-nginx\"}'... "
-METRIC_QUERY='up{app="demo-nginx"}'
+echo -n ">> Querying 'process_start_time_seconds{app=\"demo-nginx\"}'... "
+METRIC_QUERY='process_start_time_seconds{app="demo-nginx"}'
 RESPONSE=$(curl -s -G "$GRAFANA_URL/api/datasources/proxy/uid/$PROM_UID/api/v1/query" --data-urlencode "query=$METRIC_QUERY")
 
 if echo "$RESPONSE" | jq -e '.data.result | length > 0' > /dev/null; then

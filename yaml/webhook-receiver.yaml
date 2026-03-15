@@ -15,6 +15,42 @@ data:
     data_file = os.environ.get("ALERTS_FILE", "/data/alerts.jsonl")
 
 
+    def _configure_tracing():
+        try:
+            from opentelemetry import trace
+            from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
+                OTLPSpanExporter,
+            )
+            from opentelemetry.instrumentation.flask import FlaskInstrumentor
+            from opentelemetry.sdk.resources import Resource
+            from opentelemetry.sdk.trace import TracerProvider
+            from opentelemetry.sdk.trace.export import BatchSpanProcessor
+        except ImportError:
+            return
+
+        service_name = os.environ.get("OTEL_SERVICE_NAME", "alert-webhook")
+        service_namespace = os.environ.get("OTEL_SERVICE_NAMESPACE", "monitoring")
+        endpoint = os.environ.get(
+            "OTEL_EXPORTER_OTLP_ENDPOINT",
+            "http://alloy.monitoring:4318",
+        )
+
+        resource = Resource.create(
+            {
+                "service.name": service_name,
+                "service.namespace": service_namespace,
+            }
+        )
+        provider = TracerProvider(resource=resource)
+        trace.set_tracer_provider(provider)
+        span_exporter = OTLPSpanExporter(endpoint=endpoint)
+        provider.add_span_processor(BatchSpanProcessor(span_exporter))
+        FlaskInstrumentor().instrument_app(app)
+
+
+    _configure_tracing()
+
+
     def _load_alerts(limit=200):
         alerts = []
         if not os.path.exists(data_file):
@@ -144,10 +180,16 @@ spec:
             - /bin/sh
             - -c
           args:
-            - "pip install --no-cache-dir flask==3.0.2 && python /app/app.py"
+            - "pip install --no-cache-dir flask==3.0.2 opentelemetry-sdk==1.27.0 opentelemetry-exporter-otlp==1.27.0 opentelemetry-instrumentation-flask==0.48b0 && python /app/app.py"
           env:
             - name: ALERTS_FILE
               value: /data/alerts.jsonl
+            - name: OTEL_SERVICE_NAME
+              value: alert-webhook
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://alloy.monitoring:4318
+            - name: OTEL_SERVICE_NAMESPACE
+              value: monitoring
           ports:
             - containerPort: 8080
               name: http

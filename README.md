@@ -8,8 +8,16 @@ This stack provides a complete monitoring solution for your Kubernetes cluster, 
 - **Loki**: Log aggregation system (with structured metadata and persistence).
 - **Tempo**: Distributed tracing backend (with persistence).
 - **Alloy**: Grafana's OpenTelemetry-collector based agent for scraping metrics, logs, and traces.
+- **OTel Metrics Gateway**: OTLP metrics receiver that remote-writes to Prometheus.
 - **Alertmanager**: Alert routing and notification fan-out.
 - **Alert Webhook**: Lightweight alert history receiver with persistent storage.
+
+## OpenTelemetry (OTLP)
+- **Ingestion**: Apps export OTLP to Alloy on `http://alloy.monitoring:4318` (HTTP) or `alloy.monitoring:4317` (gRPC).
+- **Traces**: Alloy forwards OTLP traces to Tempo; Grafana links traces and logs.
+- **Metrics**: `demo-app` and `demo-nginx` ship metrics via OTLP (collector sidecars) to `otel-metrics`, which remote-writes to Prometheus.
+- **Instrumented App**: `alert-webhook` is auto-instrumented with OpenTelemetry and ships traces to Alloy.
+- **Safe rollout**: Prometheus scraping and Loki log collection remain unchanged for other workloads.
 
 ## Resource Management & Security
 
