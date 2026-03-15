@@ -19,6 +19,8 @@ Before and after making changes, use the following commands to verify the system
 - `make checkload`: Verifies the end-to-end data pipeline (Alloy -> DB -> Grafana API).
 - `make full`: Executes a complete clean-start-test-clean cycle.
 
+All new features should include at least one `curl` debug script in `curl/` to exercise the feature and generate traffic. Use the naming format `app-action.sh`, provide defaults with optional overrides via flags, and include a `--help` description so the script can be used for quick verification and load generation.
+
 ### 1. Extending Monitoring
 When adding new services to be monitored:
 - **Deployment**: Add standard Prometheus annotations to the Pod template:

@@ -41,6 +41,10 @@ make stop           # Deletes resources (keeps namespace)
 make clean          # Deletes namespace and stops all port-forwards
 ```
 
+### Debug Curl Scripts
+The `curl/` folder contains one-command debug scripts to generate traffic and verify each service. Each script supports `--help` with optional overrides (host, port, query).
+- Example: `./curl/demo-app-getquote.sh --number 5`
+
 ### 2. Manual Launch
 If you prefer manual commands:
 ```bash
@@ -85,8 +89,8 @@ The demo apps run OTEL-instrumented quote services.
 | **Alloy** | `http://alloy.monitoring:12345` | [http://localhost:12345](http://localhost:12345) | None |
 | **Alertmanager** | `http://alertmanager.monitoring:9093` | [http://localhost:9093](http://localhost:9093) | None |
 | **Alert Webhook** | `http://alert-webhook.monitoring:8080` | [http://localhost:8082](http://localhost:8082) | None |
-| **Demo App** | `http://demo-app.monitoring` | [http://localhost:8080](http://localhost:8080) | None |
-| **Demo Nginx** | `http://demo-nginx.monitoring` | [http://localhost:8081](http://localhost:8081) | None |
+| **Demo App** | `http://demo-app.monitoring` | `POST http://localhost:8080/getquote` | None |
+| **Demo Nginx** | `http://demo-nginx.monitoring` | `POST http://localhost:8081/getquote` | None |
 
 ## Verification & Testing
 
