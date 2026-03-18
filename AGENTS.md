@@ -58,8 +58,21 @@ Alloy uses a `.alloy` configuration file stored in a `ConfigMap`.
 Dashboards are provisioned via ConfigMaps and providers.
 - **Provider**: `yaml/grafana.yaml` contains the `grafana-dashboards-provider` ConfigMap.
 - **Dashboard JSON**: Dashboards are embedded in `yaml/grafana.yaml` as ConfigMaps and mounted to `/var/lib/grafana/dashboards`.
-- **Alerts Dashboard**: The Alert History dashboard is provisioned under `/var/lib/grafana/dashboards/alerts` and shows a quick link to the webhook UI.
 - **Datasources**: Use fixed UIDs (`prometheus`, `loki`) in provisioning to ensure dashboards work immediately.
+- **Adding a new dashboard**: Create a new ConfigMap in `yaml/grafana.yaml`, add a provider entry pointing to its mount path, and add a volumeMount + volume to the Grafana Deployment. Then `kubectl apply -f yaml/grafana.yaml` and `kubectl rollout restart deployment/grafana -n monitoring`.
+
+#### Provisioned dashboards
+
+| Dashboard | UID | Folder | ConfigMap | Mount path |
+|---|---|---|---|---|
+| Stack Overview | `stack-overview` | root | `grafana-dashboard-demo` | `/var/lib/grafana/dashboards` |
+| Cluster Nodes — CPU Usage & Load | `cluster-nodes-cpu` | Infrastructure | `grafana-dashboard-nodes` | `/var/lib/grafana/dashboards/nodes` |
+| Alert History | `alert-history` | Alerts | `grafana-dashboard-alerts` | `/var/lib/grafana/dashboards/alerts` |
+
+#### Cluster Nodes — CPU Usage & Load
+- **Panels**: current utilisation % stat, current load5 stat, utilisation timeseries, load average timeseries (load1/5/15 + core count), CPU mode breakdown (user/system/iowait), CPU resource allocation (requested vs limits vs capacity), utilisation heatmap.
+- **Key metrics**: `node_cpu_seconds_total`, `node_load1`, `node_load5`, `node_load15` (node-exporter); `kube_pod_container_resource_requests`, `kube_pod_container_resource_limits` (kube-state-metrics).
+- **CPU Usage vs CPU Load**: utilisation panels use `1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))` (% of time CPUs were busy). Load average panels use `node_load1/5/15` (queue depth; saturated when value ≥ core count).
 
 ### 5. Alerting & Notifications
 Alerting is handled by Prometheus + Alertmanager, and Grafana alerting is provisioned to the same webhook receiver.
@@ -87,6 +100,7 @@ Alerting is handled by Prometheus + Alertmanager, and Grafana alerting is provis
 - [x] Implement Grafana Dashboard provisioning for the Stack.
 - [x] Add Tempo for Distributed Tracing.
 - [x] Implement Cluster-Wide Visibility (node-exporter, kube-state-metrics).
+- [x] Add Cluster Nodes — CPU Usage & Load dashboard (utilisation %, load average, mode breakdown, resource allocation, heatmap).
 - [x] Add Persistent Volume support for Prometheus/Loki data.
 - [ ] Add per-service error rate panels and alerts (use OTEL metrics labels like `app` and `service_name`).
 - [ ] Expand trace context in dashboards (links from logs to traces in Stack Overview).

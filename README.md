@@ -162,12 +162,24 @@ kubectl port-forward -n monitoring svc/grafana 3000:3000
 ```
 
 ### 4. Provisioned Dashboards
-Grafana comes pre-configured with the **Stack Overview** dashboard.
+
+**Stack Overview** (root folder)
 - URL: [http://localhost:3000/d/stack-overview/stack-overview](http://localhost:3000/d/stack-overview/stack-overview)
 - Features: Deployment health (kube-state-metrics), app request rate + p95 latency, trace activity, and logs for the `monitoring` namespace.
 - Includes an **Alert History** panel with a quick link to the webhook UI.
 
-Grafana also includes a dedicated **Alert History** dashboard in the **Alerts** folder.
+**Cluster Nodes — CPU Usage & Load** (`Infrastructure` folder)
+- URL: [http://localhost:3000/d/cluster-nodes-cpu/cluster-nodes-cpu](http://localhost:3000/d/cluster-nodes-cpu/cluster-nodes-cpu)
+- Features:
+  - Top row: current CPU utilisation % per node (colour-coded, thresholds at 60/80/90%) alongside current 5-minute load average per node.
+  - CPU utilisation over time (timeseries, % busy, 90% threshold line).
+  - Load average over time: `load1`, `load5`, `load15` vs core count reference line (saturation = load ≥ cores).
+  - CPU mode breakdown: user / system / iowait utilisation per node.
+  - CPU resource allocation: requested vs limits (from `kube_pod_container_resource_requests/limits`) vs physical capacity.
+  - CPU utilisation heatmap by node (Spectral colour scheme).
+- Metrics used: `node_cpu_seconds_total` (node-exporter), `node_load1/5/15` (node-exporter), `kube_pod_container_resource_requests/limits` (kube-state-metrics).
+
+**Alert History** (`Alerts` folder)
 - URL: [http://localhost:3000/d/alert-history/alert-history](http://localhost:3000/d/alert-history/alert-history)
 
 ### Demo Apps
