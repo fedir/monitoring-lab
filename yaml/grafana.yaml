@@ -1120,6 +1120,123 @@ data:
           ],
           "title": "CPU Heatmap by Node",
           "type": "heatmap"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 0,
+                "gradientMode": "none",
+                "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                "insertNulls": false,
+                "lineInterpolation": "linear",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": { "type": "linear" },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": { "group": "A", "mode": "none" },
+                "thresholdsStyle": { "mode": "off" }
+              },
+              "mappings": [],
+              "max": 1,
+              "min": 0,
+              "thresholds": {
+                "mode": "percentage",
+                "steps": [
+                  { "color": "transparent", "value": null },
+                  { "color": "red", "value": 90 }
+                ]
+              },
+              "unit": "percentunit"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 9, "w": 24, "x": 0, "y": 39 },
+          "id": 8,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "right", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "1 - rate(node_cpu_seconds_total{mode=\"idle\"}[5m])",
+              "legendFormat": "core {{cpu}} — {{instance}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Per-Core CPU Load Contribution Over Time (%)",
+          "description": "Fraction of time each CPU core was busy (non-idle). One line per core — shows how load is distributed across cores and whether any single core is saturated while others are idle.",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "custom": {
+                "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                "scaleDistribution": { "type": "linear" }
+              },
+              "thresholds": {
+                "mode": "percentage",
+                "steps": [
+                  { "color": "green",  "value": null },
+                  { "color": "yellow", "value": 60 },
+                  { "color": "orange", "value": 80 },
+                  { "color": "red",    "value": 90 }
+                ]
+              },
+              "unit": "percentunit"
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 48 },
+          "id": 9,
+          "options": {
+            "calculate": false,
+            "color": {
+              "exponent": 0.5,
+              "fill": "dark-orange",
+              "mode": "scheme",
+              "reverse": false,
+              "scale": "exponential",
+              "scheme": "Spectral",
+              "steps": 64
+            },
+            "exemplars": { "color": "rgba(255,0,255,0.7)" },
+            "filterValues": { "le": 1e-9 },
+            "legend": { "show": true },
+            "rowsFrame": { "layout": "auto" },
+            "tooltip": { "mode": "single", "showColorScale": false, "yHistogram": false },
+            "yAxis": { "axisLabel": "CPU core", "axisPlacement": "left", "decimals": 0, "reverse": false, "unit": "short" }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "1 - rate(node_cpu_seconds_total{mode=\"idle\"}[5m])",
+              "format": "time_series",
+              "legendFormat": "{{cpu}}",
+              "range": true,
+              "refId": "A"
+            }
+          ],
+          "title": "Per-Core CPU Load Contribution Heatmap",
+          "description": "Each row is a CPU core; colour intensity shows the fraction of time that core was busy. Useful for spotting uneven load distribution, IRQ affinity pinning, or single-core saturation.",
+          "type": "heatmap"
         }
       ],
       "refresh": "10s",
@@ -1131,7 +1248,7 @@ data:
       "timezone": "browser",
       "title": "Cluster Nodes — CPU Usage & Load",
       "uid": "cluster-nodes-cpu",
-      "version": 1
+      "version": 2
     }
 ---
 apiVersion: apps/v1

@@ -70,9 +70,10 @@ Dashboards are provisioned via ConfigMaps and providers.
 | Alert History | `alert-history` | Alerts | `grafana-dashboard-alerts` | `/var/lib/grafana/dashboards/alerts` |
 
 #### Cluster Nodes — CPU Usage & Load
-- **Panels**: current utilisation % stat, current load5 stat, utilisation timeseries, load average timeseries (load1/5/15 + core count), CPU mode breakdown (user/system/iowait), CPU resource allocation (requested vs limits vs capacity), utilisation heatmap.
+- **Panels**: current utilisation % stat, current load5 stat, utilisation timeseries, load average timeseries (load1/5/15 + core count), CPU mode breakdown (user/system/iowait), CPU resource allocation (requested vs limits vs capacity), utilisation heatmap, per-core load contribution timeseries, per-core load contribution heatmap.
 - **Key metrics**: `node_cpu_seconds_total`, `node_load1`, `node_load5`, `node_load15` (node-exporter); `kube_pod_container_resource_requests`, `kube_pod_container_resource_limits` (kube-state-metrics).
 - **CPU Usage vs CPU Load**: utilisation panels use `1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))` (% of time CPUs were busy). Load average panels use `node_load1/5/15` (queue depth; saturated when value ≥ core count).
+- **Per-core detail**: panels 8 and 9 use `1 - rate(node_cpu_seconds_total{mode="idle"}[5m])` grouped `by (instance, cpu)` — this is the correct way to express per-core load contribution since Unix load average is system-wide and cannot be split per core. Legend format: `core {{cpu}} — {{instance}}`.
 
 ### 5. Alerting & Notifications
 Alerting is handled by Prometheus + Alertmanager, and Grafana alerting is provisioned to the same webhook receiver.
@@ -97,12 +98,52 @@ Alerting is handled by Prometheus + Alertmanager, and Grafana alerting is provis
 - **Alerts not firing**: Confirm Prometheus has loaded rules and Alertmanager is reachable from Prometheus (`alertmanager:9093`).
 
 ## Roadmap for Future Agents
+
+### Completed
 - [x] Implement Grafana Dashboard provisioning for the Stack.
 - [x] Add Tempo for Distributed Tracing.
 - [x] Implement Cluster-Wide Visibility (node-exporter, kube-state-metrics).
 - [x] Add Cluster Nodes — CPU Usage & Load dashboard (utilisation %, load average, mode breakdown, resource allocation, heatmap).
 - [x] Add Persistent Volume support for Prometheus/Loki data.
-- [ ] Add per-service error rate panels and alerts (use OTEL metrics labels like `app` and `service_name`).
-- [ ] Expand trace context in dashboards (links from logs to traces in Stack Overview).
-- [ ] Add SLO dashboards for demo services (latency, availability, saturation).
-- [ ] Document podman-based tooling in troubleshooting and testing sections.
+- [x] Add per-core CPU load contribution panels (timeseries + heatmap) to Cluster Nodes dashboard.
+
+### Physical Host — Server Observability
+> Cover the bare-metal / VM layer that Kubernetes runs on.
+- [ ] **Memory detail**: add node memory dashboard — used/available/cached/buffers, swap usage, page fault rate (`node_memory_*`).
+- [ ] **Disk I/O**: throughput (read/write bytes/s), IOPS, await time, saturation per device (`node_disk_*`). Heatmap of per-device utilisation over time.
+- [ ] **Network interfaces**: per-NIC throughput, packet rate, error/drop counters (`node_network_*`). Alert on sustained drops or errors.
+- [ ] **Filesystem**: per-mount usage %, inode exhaustion, read-only flag (`node_filesystem_*`). Alert at 80% / 95% capacity.
+- [ ] **System load context**: per-core CPU mode breakdown (user/system/iowait/steal/softirq) as stacked area — extend the existing mode breakdown panel to per-core granularity.
+- [ ] **Hardware / thermal** (if available via IPMI/DCMI exporter): CPU temperature, fan speed, power draw. Alert on thermal throttle threshold.
+- [ ] **Process-level top**: integrate `process-exporter` or Alloy process metrics to show top-N CPU/memory consumers on the host outside Kubernetes.
+
+### Virtual Cluster — Kubernetes Observability
+> Cover the orchestration and workload layer running on the host.
+- [ ] **Namespace resource quotas**: CPU/memory requested vs quota limit per namespace (`kube_resourcequota`). Alert when > 90% of quota consumed.
+- [ ] **Pod lifecycle events**: restart counts, OOMKilled events, pending/failed pod counts (`kube_pod_container_status_*`). Dashboard + alert for crash-looping workloads.
+- [ ] **Container resource efficiency**: requested vs actual CPU/memory per container (requests vs `container_cpu_usage_seconds_total`, `container_memory_working_set_bytes` from cAdvisor). Rightsizing view.
+- [ ] **Persistent Volume health**: PVC bound/pending/failed status, volume fill rate, projected time-to-full (`kubelet_volume_stats_*`). Alert when < 20% free.
+- [ ] **Kubernetes API server & etcd**: API server request latency, error rate, etcd leader changes, DB size (`apiserver_*`, `etcd_*`). Alert on elevated 5xx rate.
+- [ ] **Scheduler & controller-manager**: scheduling latency, queue depth, reconciliation errors.
+- [ ] **Network policies / DNS**: CoreDNS request rate, error rate, latency (`coredns_*`). Alert on elevated NXDOMAIN rate.
+
+### Application — Service Observability
+> Cover the demo workloads and any future services end-to-end.
+- [ ] **Per-service error rate panels and alerts**: use OTEL metrics labels (`app`, `service_name`) for HTTP 5xx rate and gRPC error rate. Alert at > 1% error rate sustained for 5 min.
+- [ ] **Latency percentiles**: p50/p95/p99 request latency per service from OTEL histogram metrics. Alert when p99 > SLO threshold.
+- [ ] **SLO dashboards**: error budget burn rate for demo services (latency, availability, saturation) — one dashboard per service with 1h/6h/24h burn windows.
+- [ ] **Trace context in dashboards**: add Tempo data links from log lines to traces in Stack Overview (correlate `traceID` label in Loki with Tempo).
+- [ ] **Exemplars**: enable exemplar support in Prometheus remote-write and surface exemplar links on latency panels (jump from p99 spike directly to a trace).
+- [ ] **Dependency map**: service graph panel using Tempo `traces_spanmetrics_*` to visualise call graph and per-edge error/latency.
+
+### Alerting & Reliability
+- [ ] **Runbook links**: add `runbook_url` annotations to all Prometheus alert rules pointing to a local markdown runbook in `docs/runbooks/`.
+- [ ] **Alert deduplication and grouping**: tune Alertmanager `group_by`, `group_wait`, `repeat_interval` to reduce noise for the demo environment.
+- [ ] **Dead man's switch**: add a always-firing `Watchdog` alert so silence of that alert indicates the pipeline itself is broken.
+- [ ] **Multi-window SLO alerts**: implement 2% / 5% burn-rate alerts (1h + 6h windows) for the demo services.
+
+### Operational & Tooling
+- [ ] **Document podman-based tooling** in troubleshooting and testing sections.
+- [ ] **Automated dashboard tests**: script that queries each provisioned dashboard via Grafana API and asserts all panels return data (extend `make checkload`).
+- [ ] **Log-based alerting**: add Loki ruler rules for error-level log patterns (e.g., repeated 5xx in nginx access log) forwarded to Alertmanager.
+- [ ] **Cardinality guard**: add a Prometheus recording rule or Grafana panel tracking total active time series to catch label explosion early.
