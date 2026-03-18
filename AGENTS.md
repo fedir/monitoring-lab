@@ -68,12 +68,32 @@ Dashboards are provisioned via ConfigMaps and providers.
 | Stack Overview | `stack-overview` | root | `grafana-dashboard-demo` | `/var/lib/grafana/dashboards` |
 | Cluster Nodes — CPU Usage & Load | `cluster-nodes-cpu` | Infrastructure | `grafana-dashboard-nodes` | `/var/lib/grafana/dashboards/nodes` |
 | Alert History | `alert-history` | Alerts | `grafana-dashboard-alerts` | `/var/lib/grafana/dashboards/alerts` |
+| Physical Host — Memory & Swap | `host-memory` | Infrastructure | `grafana-dashboard-host` | `/var/lib/grafana/dashboards/host` |
+| Physical Host — Disk, Filesystem & Network | `host-disk-net` | Infrastructure | `grafana-dashboard-host` | `/var/lib/grafana/dashboards/host` |
 
 #### Cluster Nodes — CPU Usage & Load
 - **Panels**: current utilisation % stat, current load5 stat, utilisation timeseries, load average timeseries (load1/5/15 + core count), CPU mode breakdown (user/system/iowait), CPU resource allocation (requested vs limits vs capacity), utilisation heatmap, per-core load contribution timeseries, per-core load contribution heatmap.
 - **Key metrics**: `node_cpu_seconds_total`, `node_load1`, `node_load5`, `node_load15` (node-exporter); `kube_pod_container_resource_requests`, `kube_pod_container_resource_limits` (kube-state-metrics).
 - **CPU Usage vs CPU Load**: utilisation panels use `1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))` (% of time CPUs were busy). Load average panels use `node_load1/5/15` (queue depth; saturated when value ≥ core count).
 - **Per-core detail**: panels 8 and 9 use `1 - rate(node_cpu_seconds_total{mode="idle"}[5m])` grouped `by (instance, cpu)` — this is the correct way to express per-core load contribution since Unix load average is system-wide and cannot be split per core. Legend format: `core {{cpu}} — {{instance}}`.
+
+#### Physical Host — Memory & Swap
+- **Panels**: Host Health Overview composite stat (top), Memory Used % stat, Memory Available stat, Swap Used % stat, Major Page Faults/s stat, Memory Breakdown stacked timeseries (Used/Cached/Buffers/Free), Swap Usage timeseries, Page Fault Rate timeseries (minor + major), Memory Pressure PSI timeseries.
+- **Key metrics**: `node_memory_MemTotal_bytes`, `node_memory_MemAvailable_bytes`, `node_memory_MemFree_bytes`, `node_memory_Buffers_bytes`, `node_memory_Cached_bytes`, `node_memory_SReclaimable_bytes`, `node_memory_SwapTotal_bytes`, `node_memory_SwapFree_bytes`, `node_memory_SwapCached_bytes`, `node_vmstat_pgfault`, `node_vmstat_pgmajfault`, `node_pressure_memory_waiting_seconds_total`, `node_pressure_memory_stalled_seconds_total`.
+- **Memory breakdown formula**: Used = `MemTotal - MemFree - Buffers - Cached - SReclaimable`. Stacked with Cached, Buffers, Free sums to MemTotal.
+- **PSI**: Pressure Stall Information — `waiting` = some tasks blocked, `stalled` = all tasks blocked (most severe).
+- **Health Overview cells**: Memory Used % (warn 70%, crit 90%), Swap Used % (warn 20%, crit 60%), PSI Memory Stalled (warn 0.1%, crit 5%), Major Page Faults/s (warn 5, crit 50).
+
+#### Physical Host — Disk, Filesystem & Network
+- **Panels**: Host Health Overview composite stat (top), Disk Read/Write Throughput stats, Net RX/TX Throughput stats, Disk Throughput timeseries, Disk IOPS timeseries, Disk I/O Await (ms) timeseries, Disk Utilisation % timeseries, Filesystem Usage bargauge (per mount), Network Throughput timeseries, Network Packet Rate timeseries, Network Errors & Drops timeseries, I/O Pressure PSI timeseries.
+- **Key metrics**: `node_disk_read_bytes_total`, `node_disk_written_bytes_total`, `node_disk_reads_completed_total`, `node_disk_writes_completed_total`, `node_disk_read_time_seconds_total`, `node_disk_write_time_seconds_total`, `node_disk_io_time_seconds_total`, `node_filesystem_size_bytes`, `node_filesystem_free_bytes`, `node_network_receive_bytes_total`, `node_network_transmit_bytes_total`, `node_network_receive_packets_total`, `node_network_transmit_packets_total`, `node_network_receive_errs_total`, `node_network_transmit_errs_total`, `node_network_receive_drop_total`, `node_network_transmit_drop_total`, `node_pressure_io_waiting_seconds_total`, `node_pressure_io_stalled_seconds_total`.
+- **Device filters**: disk panels use `device!~"loop.*"`; network panels use `device!~"lo|veth.*"` to exclude loopback and container virtual interfaces.
+- **Filesystem filter**: `fstype=~"xfs|ext4|ext3|btrfs|zfs"` excludes tmpfs and containerd sandbox mounts.
+- **Disk await formula**: `rate(node_disk_read_time_seconds_total[5m]) / rate(node_disk_reads_completed_total[5m]) * 1000` — naturally produces NaN (shown as gap) when IOPS = 0.
+- **Health Overview cells**: Disk Utilisation % (warn 70%, crit 90%), Disk Read Await ms (warn 10ms, crit 50ms), Filesystem Used % (warn 75%, crit 90%), Net Errors+Drops/s (warn 0.1, crit 1.0), PSI IO Stalled (warn 0.1%, crit 5%).
+
+#### Composite Health Overview pattern
+Both host dashboards open with a full-width **Host Health Overview** stat panel (type `stat`, `colorMode: background`, `graphMode: none`). Each cell is a separate instant query returning a scalar; per-field threshold overrides set the unit and warning/critical thresholds independently. No polystat plugin required — native Grafana stat panel in multi-query mode achieves the same traffic-light grid. The `default` dashboard provider scans subdirectories recursively, so specialised providers (`host`, `nodes`, `alerts`) will produce duplicate-UID warnings at startup; this is cosmetic and does not affect dashboard loading.
 
 ### 5. Alerting & Notifications
 Alerting is handled by Prometheus + Alertmanager, and Grafana alerting is provisioned to the same webhook receiver.
@@ -96,6 +116,7 @@ Alerting is handled by Prometheus + Alertmanager, and Grafana alerting is provis
   ```
 - **Loki "No data"**: Ensure Alloy is labeling logs correctly. Check `discovery.relabel` for logs in `yaml/alloy.yaml`.
 - **Alerts not firing**: Confirm Prometheus has loaded rules and Alertmanager is reachable from Prometheus (`alertmanager:9093`).
+- **Duplicate UID warnings at startup**: The `default` dashboard provider scans `/var/lib/grafana/dashboards` recursively, so dashboards mounted in subdirectories (`nodes/`, `alerts/`, `host/`) are found by both `default` and their specialised provider. Grafana logs `"the same UID is used more than once"` and `"no database write permissions"` for affected providers — this is cosmetic and dashboards load correctly. To silence it, add `allowUiUpdates: false` to specialised providers or restrict `default` to non-recursive scanning.
 
 ## Roadmap for Future Agents
 
@@ -109,10 +130,11 @@ Alerting is handled by Prometheus + Alertmanager, and Grafana alerting is provis
 
 ### Physical Host — Server Observability
 > Cover the bare-metal / VM layer that Kubernetes runs on.
-- [ ] **Memory detail**: add node memory dashboard — used/available/cached/buffers, swap usage, page fault rate (`node_memory_*`).
-- [ ] **Disk I/O**: throughput (read/write bytes/s), IOPS, await time, saturation per device (`node_disk_*`). Heatmap of per-device utilisation over time.
-- [ ] **Network interfaces**: per-NIC throughput, packet rate, error/drop counters (`node_network_*`). Alert on sustained drops or errors.
-- [ ] **Filesystem**: per-mount usage %, inode exhaustion, read-only flag (`node_filesystem_*`). Alert at 80% / 95% capacity.
+- [x] **Memory detail**: `host-memory` dashboard — used/available/cached/buffers, swap usage, page fault rate, PSI memory pressure (`node_memory_*`).
+- [x] **Disk I/O**: `host-disk-net` dashboard — throughput (read/write bytes/s), IOPS, await time, disk utilisation % per device (`node_disk_*`).
+- [x] **Network interfaces**: `host-disk-net` dashboard — per-NIC throughput, packet rate, error/drop counters (`node_network_*`), I/O PSI.
+- [x] **Filesystem**: `host-disk-net` dashboard — per-mount usage % bargauge, filtered to real fstypes (`node_filesystem_*`).
+- [x] **Composite health overview**: full-width traffic-light stat panel at the top of each host dashboard — green/orange/red per metric cell using native Grafana stat panel with per-field threshold overrides (no polystat plugin needed).
 - [ ] **System load context**: per-core CPU mode breakdown (user/system/iowait/steal/softirq) as stacked area — extend the existing mode breakdown panel to per-core granularity.
 - [ ] **Hardware / thermal** (if available via IPMI/DCMI exporter): CPU temperature, fan speed, power draw. Alert on thermal throttle threshold.
 - [ ] **Process-level top**: integrate `process-exporter` or Alloy process metrics to show top-N CPU/memory consumers on the host outside Kubernetes.

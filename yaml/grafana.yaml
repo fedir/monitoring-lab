@@ -77,6 +77,14 @@ data:
       editable: true
       options:
         path: /var/lib/grafana/dashboards/nodes
+    - name: 'host'
+      orgId: 1
+      folder: 'Infrastructure'
+      type: file
+      disableDeletion: false
+      editable: true
+      options:
+        path: /var/lib/grafana/dashboards/host
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -1251,6 +1259,611 @@ data:
       "version": 2
     }
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: monitoring
+  name: grafana-dashboard-host
+data:
+  host-memory.json: |
+    {
+      "annotations": { "list": [{ "builtIn": 1, "datasource": { "type": "grafana", "uid": "grafana" }, "enable": true, "hide": true, "iconColor": "rgba(0, 211, 255, 1)", "name": "Annotations & Alerts", "type": "dashboard" }] },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "Composite health status. Each cell is green when within normal range, orange at warning threshold, red at critical. Any non-green cell warrants investigation.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "absolute", "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 80 },
+                { "color": "red", "value": 90 }
+              ]},
+              "mappings": [],
+              "noValue": "N/A"
+            },
+            "overrides": [
+              { "matcher": { "id": "byName", "options": "Memory Used %" }, "properties": [{ "id": "unit", "value": "percentunit" }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.7 }, { "color": "red", "value": 0.9 }] } }] },
+              { "matcher": { "id": "byName", "options": "Swap Used %" }, "properties": [{ "id": "unit", "value": "percentunit" }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.2 }, { "color": "red", "value": 0.6 }] } }] },
+              { "matcher": { "id": "byName", "options": "PSI Memory Stalled" }, "properties": [{ "id": "unit", "value": "percentunit" }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.001 }, { "color": "red", "value": 0.05 }] } }] },
+              { "matcher": { "id": "byName", "options": "Major Page Faults/s" }, "properties": [{ "id": "unit", "value": "ops" }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 5 }, { "color": "red", "value": 50 }] } }] }
+            ]
+          },
+          "gridPos": { "h": 6, "w": 24, "x": 0, "y": 0 },
+          "id": 10,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes", "instant": true, "legendFormat": "Memory Used %", "refId": "A" },
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "(node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes) / clamp_min(node_memory_SwapTotal_bytes, 1)", "instant": true, "legendFormat": "Swap Used %", "refId": "B" },
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_pressure_memory_stalled_seconds_total[5m])", "instant": true, "legendFormat": "PSI Memory Stalled", "refId": "C" },
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_vmstat_pgmajfault[5m])", "instant": true, "legendFormat": "Major Page Faults/s", "refId": "D" }
+          ],
+          "title": "Host Health Overview",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "percentage", "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 70 },
+                { "color": "orange", "value": 85 },
+                { "color": "red", "value": 95 }
+              ]},
+              "unit": "percentunit", "min": 0, "max": 1
+            }
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 6 },
+          "id": 1,
+          "options": { "colorMode": "background", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+          "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes", "instant": true, "legendFormat": "{{instance}}", "refId": "A" }],
+          "title": "Memory Used %",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "absolute", "steps": [
+                { "color": "red", "value": null },
+                { "color": "orange", "value": 536870912 },
+                { "color": "yellow", "value": 1073741824 },
+                { "color": "green", "value": 2147483648 }
+              ]},
+              "unit": "bytes"
+            }
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 6 },
+          "id": 2,
+          "options": { "colorMode": "background", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+          "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "node_memory_MemAvailable_bytes", "instant": true, "legendFormat": "{{instance}}", "refId": "A" }],
+          "title": "Memory Available",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "percentage", "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 20 },
+                { "color": "orange", "value": 50 },
+                { "color": "red", "value": 80 }
+              ]},
+              "unit": "percentunit", "min": 0, "max": 1, "noValue": "No swap"
+            }
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 6 },
+          "id": 3,
+          "options": { "colorMode": "background", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+          "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "(node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes) / node_memory_SwapTotal_bytes", "instant": true, "legendFormat": "{{instance}}", "refId": "A" }],
+          "title": "Swap Used %",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "Hard page faults require disk reads. Sustained elevation indicates memory pressure forcing swap reads.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "absolute", "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 10 },
+                { "color": "orange", "value": 100 },
+                { "color": "red", "value": 1000 }
+              ]},
+              "unit": "ops"
+            }
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 6 },
+          "id": 4,
+          "options": { "colorMode": "background", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+          "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_vmstat_pgmajfault[5m])", "instant": true, "legendFormat": "{{instance}}", "refId": "A" }],
+          "title": "Major Page Faults/s",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "Stacked breakdown of physical memory. Used = application memory (not reclaimable). Cached includes reclaimable slab. Free is immediately available without reclaim.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {
+                "drawStyle": "line", "fillOpacity": 80, "gradientMode": "none",
+                "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+                "lineWidth": 0, "showPoints": "never",
+                "stacking": { "group": "A", "mode": "normal" }
+              },
+              "unit": "bytes", "min": 0
+            },
+            "overrides": [
+              { "matcher": { "id": "byName", "options": "Used" },    "properties": [{ "id": "color", "value": { "fixedColor": "dark-red",   "mode": "fixed" } }] },
+              { "matcher": { "id": "byName", "options": "Cached" },  "properties": [{ "id": "color", "value": { "fixedColor": "blue",       "mode": "fixed" } }] },
+              { "matcher": { "id": "byName", "options": "Buffers" }, "properties": [{ "id": "color", "value": { "fixedColor": "dark-blue",  "mode": "fixed" } }] },
+              { "matcher": { "id": "byName", "options": "Free" },    "properties": [{ "id": "color", "value": { "fixedColor": "dark-green", "mode": "fixed" } }] }
+            ]
+          },
+          "gridPos": { "h": 10, "w": 24, "x": 0, "y": 10 },
+          "id": 5,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "right", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "node_memory_MemTotal_bytes - node_memory_MemFree_bytes - node_memory_Buffers_bytes - node_memory_Cached_bytes - node_memory_SReclaimable_bytes", "legendFormat": "Used",    "range": true, "refId": "A" },
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "node_memory_Cached_bytes + node_memory_SReclaimable_bytes",                                                                                                         "legendFormat": "Cached",  "range": true, "refId": "B" },
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "node_memory_Buffers_bytes",                                                                                                                                         "legendFormat": "Buffers", "range": true, "refId": "C" },
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "node_memory_MemFree_bytes",                                                                                                                                         "legendFormat": "Free",    "range": true, "refId": "D" }
+          ],
+          "title": "Memory Breakdown",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "Swap used over time. Growth indicates the kernel is paging out application data — a sign of sustained memory pressure.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2, "showPoints": "never", "stacking": { "group": "A", "mode": "none" } },
+              "unit": "bytes", "min": 0
+            }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+          "id": 6,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes", "legendFormat": "Swap Used — {{instance}}",   "range": true, "refId": "A" },
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "node_memory_SwapCached_bytes",                              "legendFormat": "Swap Cached — {{instance}}", "range": true, "refId": "B" }
+          ],
+          "title": "Swap Usage",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "Minor faults are satisfied from memory; major faults require disk I/O. Elevated major faults indicate active swapping or cold-cache misses.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
+              "unit": "ops"
+            }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+          "id": 7,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_vmstat_pgfault[5m])",    "legendFormat": "Minor faults/s — {{instance}}", "range": true, "refId": "A" },
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_vmstat_pgmajfault[5m])", "legendFormat": "Major faults/s — {{instance}}", "range": true, "refId": "B" }
+          ],
+          "title": "Page Fault Rate",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "PSI (Pressure Stall Information) — fraction of time tasks were stalled waiting for memory. Stalled (all tasks blocked) is the most severe signal.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2, "showPoints": "never" },
+              "unit": "percentunit", "min": 0
+            }
+          },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 28 },
+          "id": 8,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "right", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_pressure_memory_waiting_seconds_total[5m])", "legendFormat": "Waiting (some tasks) — {{instance}}", "range": true, "refId": "A" },
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_pressure_memory_stalled_seconds_total[5m])", "legendFormat": "Stalled (all tasks) — {{instance}}",  "range": true, "refId": "B" }
+          ],
+          "title": "Memory Pressure (PSI)",
+          "type": "timeseries"
+        }
+      ],
+      "refresh": "10s",
+      "schemaVersion": 39,
+      "tags": ["host", "infrastructure", "memory"],
+      "templating": { "list": [] },
+      "time": { "from": "now-30m", "to": "now" },
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "Physical Host — Memory & Swap",
+      "uid": "host-memory",
+      "version": 2
+    }
+  host-disk-net.json: |
+    {
+      "annotations": { "list": [{ "builtIn": 1, "datasource": { "type": "grafana", "uid": "grafana" }, "enable": true, "hide": true, "iconColor": "rgba(0, 211, 255, 1)", "name": "Annotations & Alerts", "type": "dashboard" }] },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "Composite health status. Each cell is green when within normal range, orange at warning threshold, red at critical. Any non-green cell warrants investigation.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "absolute", "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 80 },
+                { "color": "red", "value": 90 }
+              ]},
+              "mappings": [],
+              "noValue": "N/A"
+            },
+            "overrides": [
+              { "matcher": { "id": "byName", "options": "Disk Utilisation %" }, "properties": [{ "id": "unit", "value": "percentunit" }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.7 }, { "color": "red", "value": 0.9 }] } }] },
+              { "matcher": { "id": "byName", "options": "Disk Read Await ms" }, "properties": [{ "id": "unit", "value": "ms" }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 10 }, { "color": "red", "value": 50 }] } }] },
+              { "matcher": { "id": "byName", "options": "Filesystem Used %" }, "properties": [{ "id": "unit", "value": "percentunit" }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.75 }, { "color": "red", "value": 0.9 }] } }] },
+              { "matcher": { "id": "byName", "options": "Net Errors+Drops/s" }, "properties": [{ "id": "unit", "value": "pps" }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.1 }, { "color": "red", "value": 1.0 }] } }] },
+              { "matcher": { "id": "byName", "options": "PSI IO Stalled" }, "properties": [{ "id": "unit", "value": "percentunit" }, { "id": "thresholds", "value": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.001 }, { "color": "red", "value": 0.05 }] } }] }
+            ]
+          },
+          "gridPos": { "h": 6, "w": 24, "x": 0, "y": 0 },
+          "id": 14,
+          "options": {
+            "colorMode": "background",
+            "graphMode": "none",
+            "justifyMode": "center",
+            "orientation": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+            "textMode": "auto"
+          },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "max(rate(node_disk_io_time_seconds_total{device!~\"loop.*\"}[5m]))", "instant": true, "legendFormat": "Disk Utilisation %", "refId": "A" },
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "max(rate(node_disk_read_time_seconds_total{device!~\"loop.*\"}[5m]) / rate(node_disk_reads_completed_total{device!~\"loop.*\"}[5m]) * 1000)", "instant": true, "legendFormat": "Disk Read Await ms", "refId": "B" },
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "max((node_filesystem_size_bytes{fstype=~\"xfs|ext4|ext3|btrfs|zfs\"} - node_filesystem_free_bytes{fstype=~\"xfs|ext4|ext3|btrfs|zfs\"}) / node_filesystem_size_bytes{fstype=~\"xfs|ext4|ext3|btrfs|zfs\"})", "instant": true, "legendFormat": "Filesystem Used %", "refId": "C" },
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "sum(rate(node_network_receive_errs_total{device!~\"lo|veth.*\"}[5m]) + rate(node_network_transmit_errs_total{device!~\"lo|veth.*\"}[5m]) + rate(node_network_receive_drop_total{device!~\"lo|veth.*\"}[5m]) + rate(node_network_transmit_drop_total{device!~\"lo|veth.*\"}[5m]))", "instant": true, "legendFormat": "Net Errors+Drops/s", "refId": "D" },
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_pressure_io_stalled_seconds_total[5m])", "instant": true, "legendFormat": "PSI IO Stalled", "refId": "E" }
+          ],
+          "title": "Host Health Overview",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] },
+              "unit": "Bps"
+            }
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 6 },
+          "id": 1,
+          "options": { "colorMode": "background", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+          "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "sum(rate(node_disk_read_bytes_total{device!~\"loop.*\"}[5m])) by (instance)", "instant": true, "legendFormat": "{{instance}}", "refId": "A" }],
+          "title": "Disk Read Throughput",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "orange", "value": null }] },
+              "unit": "Bps"
+            }
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 6 },
+          "id": 2,
+          "options": { "colorMode": "background", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+          "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "sum(rate(node_disk_written_bytes_total{device!~\"loop.*\"}[5m])) by (instance)", "instant": true, "legendFormat": "{{instance}}", "refId": "A" }],
+          "title": "Disk Write Throughput",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
+              "unit": "Bps"
+            }
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 12, "y": 6 },
+          "id": 3,
+          "options": { "colorMode": "background", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+          "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "sum(rate(node_network_receive_bytes_total{device!~\"lo|veth.*\"}[5m])) by (instance)", "instant": true, "legendFormat": "{{instance}}", "refId": "A" }],
+          "title": "Network RX Throughput",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "absolute", "steps": [{ "color": "purple", "value": null }] },
+              "unit": "Bps"
+            }
+          },
+          "gridPos": { "h": 4, "w": 6, "x": 18, "y": 6 },
+          "id": 4,
+          "options": { "colorMode": "background", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"] } },
+          "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "sum(rate(node_network_transmit_bytes_total{device!~\"lo|veth.*\"}[5m])) by (instance)", "instant": true, "legendFormat": "{{instance}}", "refId": "A" }],
+          "title": "Network TX Throughput",
+          "type": "stat"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "Read and write throughput per disk device (bytes/s). Excludes loop devices.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
+              "unit": "Bps"
+            }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
+          "id": 5,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_disk_read_bytes_total{device!~\"loop.*\"}[5m])",    "legendFormat": "read  {{device}} — {{instance}}", "range": true, "refId": "A" },
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_disk_written_bytes_total{device!~\"loop.*\"}[5m])", "legendFormat": "write {{device}} — {{instance}}", "range": true, "refId": "B" }
+          ],
+          "title": "Disk Throughput (Read / Write)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "Completed I/O operations per second per device. High IOPS with low throughput suggests many small random reads/writes.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
+              "unit": "iops"
+            }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
+          "id": 6,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_disk_reads_completed_total{device!~\"loop.*\"}[5m])",  "legendFormat": "read  {{device}} — {{instance}}", "range": true, "refId": "A" },
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_disk_writes_completed_total{device!~\"loop.*\"}[5m])", "legendFormat": "write {{device}} — {{instance}}", "range": true, "refId": "B" }
+          ],
+          "title": "Disk IOPS (Read / Write)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "Average time per I/O operation in milliseconds. High await (>20ms for HDDs, >1ms for SSDs) indicates disk saturation or queueing.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
+              "unit": "ms"
+            }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
+          "id": 7,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_disk_read_time_seconds_total{device!~\"loop.*\"}[5m])  / rate(node_disk_reads_completed_total{device!~\"loop.*\"}[5m])  * 1000", "legendFormat": "read await  {{device}} — {{instance}}", "range": true, "refId": "A" },
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_disk_write_time_seconds_total{device!~\"loop.*\"}[5m]) / rate(node_disk_writes_completed_total{device!~\"loop.*\"}[5m]) * 1000", "legendFormat": "write await {{device}} — {{instance}}", "range": true, "refId": "B" }
+          ],
+          "title": "Disk I/O Await (ms)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "Fraction of time the device was busy handling I/O. Values near 100% indicate disk saturation.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
+              "unit": "percentunit", "min": 0, "max": 1
+            }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
+          "id": 8,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_disk_io_time_seconds_total{device!~\"loop.*\"}[5m])", "legendFormat": "{{device}} — {{instance}}", "range": true, "refId": "A" }
+          ],
+          "title": "Disk Utilisation (%)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "Filesystem usage by mount point. Excludes tmpfs and container overlay mounts. Alert threshold at 80% / 95%.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "thresholds" },
+              "thresholds": { "mode": "percentage", "steps": [
+                { "color": "green",  "value": null },
+                { "color": "yellow", "value": 60 },
+                { "color": "orange", "value": 80 },
+                { "color": "red",    "value": 95 }
+              ]},
+              "unit": "percentunit", "min": 0, "max": 1
+            }
+          },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 26 },
+          "id": 9,
+          "options": {
+            "displayMode": "gradient",
+            "minVizWidth": 8,
+            "orientation": "horizontal",
+            "reduceOptions": { "calcs": ["lastNotNull"] },
+            "showUnfilled": true,
+            "valueMode": "color"
+          },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "(node_filesystem_size_bytes{fstype=~\"xfs|ext4|ext3|btrfs|zfs\"} - node_filesystem_free_bytes{fstype=~\"xfs|ext4|ext3|btrfs|zfs\"}) / node_filesystem_size_bytes{fstype=~\"xfs|ext4|ext3|btrfs|zfs\"}", "instant": true, "legendFormat": "{{mountpoint}} ({{device}}) — {{instance}}", "refId": "A" }
+          ],
+          "title": "Filesystem Usage by Mount",
+          "type": "bargauge"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "Network throughput on physical interfaces (excludes loopback and veth container links).",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
+              "unit": "Bps"
+            }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 34 },
+          "id": 10,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_network_receive_bytes_total{device!~\"lo|veth.*\"}[5m])",  "legendFormat": "RX {{device}} — {{instance}}", "range": true, "refId": "A" },
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_network_transmit_bytes_total{device!~\"lo|veth.*\"}[5m])", "legendFormat": "TX {{device}} — {{instance}}", "range": true, "refId": "B" }
+          ],
+          "title": "Network Throughput (RX / TX)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "Packet rate on physical interfaces. High packet rate with low byte rate suggests many small packets (e.g., ACK storms, DNS floods).",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never" },
+              "unit": "pps"
+            }
+          },
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 34 },
+          "id": 11,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_network_receive_packets_total{device!~\"lo|veth.*\"}[5m])",  "legendFormat": "RX {{device}} — {{instance}}", "range": true, "refId": "A" },
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_network_transmit_packets_total{device!~\"lo|veth.*\"}[5m])", "legendFormat": "TX {{device}} — {{instance}}", "range": true, "refId": "B" }
+          ],
+          "title": "Network Packet Rate (RX / TX)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "Receive/transmit errors and dropped packets. Any non-zero value warrants investigation — errors indicate hardware or driver issues; drops indicate buffer exhaustion.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2, "showPoints": "never" },
+              "unit": "pps"
+            },
+            "overrides": [
+              { "matcher": { "id": "byRegexp", "options": "error.*" },  "properties": [{ "id": "color", "value": { "fixedColor": "red",    "mode": "fixed" } }] },
+              { "matcher": { "id": "byRegexp", "options": "drop.*" },   "properties": [{ "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }] }
+            ]
+          },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 42 },
+          "id": 12,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "right", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_network_receive_errs_total{device!~\"lo|veth.*\"}[5m])",   "legendFormat": "error RX {{device}} — {{instance}}", "range": true, "refId": "A" },
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_network_transmit_errs_total{device!~\"lo|veth.*\"}[5m])",  "legendFormat": "error TX {{device}} — {{instance}}", "range": true, "refId": "B" },
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_network_receive_drop_total{device!~\"lo|veth.*\"}[5m])",   "legendFormat": "drop RX {{device}} — {{instance}}",  "range": true, "refId": "C" },
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_network_transmit_drop_total{device!~\"lo|veth.*\"}[5m])",  "legendFormat": "drop TX {{device}} — {{instance}}",  "range": true, "refId": "D" }
+          ],
+          "title": "Network Errors & Drops",
+          "type": "timeseries"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "description": "PSI (Pressure Stall Information) for I/O. Stalled means all runnable tasks were blocked on I/O — the most severe saturation signal.",
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2, "showPoints": "never" },
+              "unit": "percentunit", "min": 0
+            }
+          },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 50 },
+          "id": 13,
+          "options": {
+            "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "right", "showLegend": true },
+            "tooltip": { "mode": "multi", "sort": "desc" }
+          },
+          "targets": [
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_pressure_io_waiting_seconds_total[5m])",  "legendFormat": "I/O Waiting (some tasks) — {{instance}}", "range": true, "refId": "A" },
+            { "datasource": { "type": "prometheus", "uid": "prometheus" }, "editorMode": "code", "expr": "rate(node_pressure_io_stalled_seconds_total[5m])",  "legendFormat": "I/O Stalled (all tasks) — {{instance}}",  "range": true, "refId": "B" }
+          ],
+          "title": "I/O Pressure (PSI)",
+          "type": "timeseries"
+        }
+      ],
+      "refresh": "10s",
+      "schemaVersion": 39,
+      "tags": ["host", "infrastructure", "disk", "network"],
+      "templating": { "list": [] },
+      "time": { "from": "now-30m", "to": "now" },
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "Physical Host — Disk, Filesystem & Network",
+      "uid": "host-disk-net",
+      "version": 2
+    }
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -1297,6 +1910,8 @@ spec:
               mountPath: /var/lib/grafana/dashboards/alerts
             - name: dashboards-nodes
               mountPath: /var/lib/grafana/dashboards/nodes
+            - name: dashboards-host
+              mountPath: /var/lib/grafana/dashboards/host
             - name: alerting
               mountPath: /etc/grafana/provisioning/alerting
       volumes:
@@ -1315,6 +1930,9 @@ spec:
         - name: dashboards-nodes
           configMap:
             name: grafana-dashboard-nodes
+        - name: dashboards-host
+          configMap:
+            name: grafana-dashboard-host
         - name: alerting
           configMap:
             name: grafana-alerting

@@ -177,7 +177,31 @@ kubectl port-forward -n monitoring svc/grafana 3000:3000
   - CPU mode breakdown: user / system / iowait utilisation per node.
   - CPU resource allocation: requested vs limits (from `kube_pod_container_resource_requests/limits`) vs physical capacity.
   - CPU utilisation heatmap by node (Spectral colour scheme).
+  - Per-core CPU load contribution timeseries — one line per core, shows uneven load distribution.
+  - Per-core CPU load contribution heatmap — cores on Y-axis, useful for spotting single-core saturation.
 - Metrics used: `node_cpu_seconds_total` (node-exporter), `node_load1/5/15` (node-exporter), `kube_pod_container_resource_requests/limits` (kube-state-metrics).
+
+**Physical Host — Memory & Swap** (`Infrastructure` folder)
+- URL: [http://localhost:3000/d/host-memory](http://localhost:3000/d/host-memory)
+- Features:
+  - **Host Health Overview** (top, full-width): traffic-light stat panel — Memory Used %, Swap Used %, PSI Memory Stalled, Major Page Faults/s. Green = healthy, orange = warning, red = critical.
+  - Memory Used %, Memory Available, Swap Used %, Major Page Faults/s stat cells.
+  - Memory Breakdown stacked timeseries: Used / Cached / Buffers / Free summing to MemTotal.
+  - Swap Usage timeseries (used + cached).
+  - Page Fault Rate timeseries: minor vs major faults/s (elevated major faults = active swapping).
+  - Memory Pressure PSI: waiting (some tasks blocked) and stalled (all tasks blocked) fractions.
+- Metrics used: `node_memory_*`, `node_vmstat_pgfault/pgmajfault`, `node_pressure_memory_*` (node-exporter).
+
+**Physical Host — Disk, Filesystem & Network** (`Infrastructure` folder)
+- URL: [http://localhost:3000/d/host-disk-net](http://localhost:3000/d/host-disk-net)
+- Features:
+  - **Host Health Overview** (top, full-width): traffic-light stat panel — Disk Utilisation %, Disk Read Await ms, Filesystem Used %, Net Errors+Drops/s, PSI IO Stalled.
+  - Disk Read/Write throughput and Network RX/TX throughput stat cells.
+  - Disk Throughput, IOPS, I/O Await (ms), and Utilisation % timeseries per device (loop devices excluded).
+  - Filesystem usage bar gauge per mount point (xfs/ext4/btrfs/zfs only — no tmpfs noise).
+  - Network Throughput, Packet Rate, and Errors & Drops timeseries (physical interfaces only, veth/lo excluded).
+  - I/O Pressure PSI timeseries (waiting + stalled).
+- Metrics used: `node_disk_*`, `node_filesystem_*`, `node_network_*`, `node_pressure_io_*` (node-exporter).
 
 **Alert History** (`Alerts` folder)
 - URL: [http://localhost:3000/d/alert-history/alert-history](http://localhost:3000/d/alert-history/alert-history)
