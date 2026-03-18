@@ -184,7 +184,7 @@ kubectl port-forward -n monitoring svc/grafana 3000:3000
 **Physical Host — Memory & Swap** (`Infrastructure` folder)
 - URL: [http://localhost:3000/d/host-memory](http://localhost:3000/d/host-memory)
 - Features:
-  - **Host Health Overview** (top, full-width): traffic-light stat panel — Memory Used %, Swap Used %, PSI Memory Stalled, Major Page Faults/s. Green = healthy, orange = warning, red = critical.
+  - **Host Health Overview** (top, full-width): polystat hexagon grid — Memory Used %, Swap Used %, PSI Memory Stalled, Major Page Faults/s. Each hexagon is green/orange/red based on per-metric thresholds.
   - Memory Used %, Memory Available, Swap Used %, Major Page Faults/s stat cells.
   - Memory Breakdown stacked timeseries: Used / Cached / Buffers / Free summing to MemTotal.
   - Swap Usage timeseries (used + cached).
@@ -195,7 +195,7 @@ kubectl port-forward -n monitoring svc/grafana 3000:3000
 **Physical Host — Disk, Filesystem & Network** (`Infrastructure` folder)
 - URL: [http://localhost:3000/d/host-disk-net](http://localhost:3000/d/host-disk-net)
 - Features:
-  - **Host Health Overview** (top, full-width): traffic-light stat panel — Disk Utilisation %, Disk Read Await ms, Filesystem Used %, Net Errors+Drops/s, PSI IO Stalled.
+  - **Host Health Overview** (top, full-width): polystat hexagon grid — Disk Utilisation %, Disk Read Await ms, Filesystem Used %, Net Errors+Drops/s, PSI IO Stalled. Each hexagon is green/orange/red based on per-metric thresholds.
   - Disk Read/Write throughput and Network RX/TX throughput stat cells.
   - Disk Throughput, IOPS, I/O Await (ms), and Utilisation % timeseries per device (loop devices excluded).
   - Filesystem usage bar gauge per mount point (xfs/ext4/btrfs/zfs only — no tmpfs noise).

@@ -93,7 +93,14 @@ Dashboards are provisioned via ConfigMaps and providers.
 - **Health Overview cells**: Disk Utilisation % (warn 70%, crit 90%), Disk Read Await ms (warn 10ms, crit 50ms), Filesystem Used % (warn 75%, crit 90%), Net Errors+Drops/s (warn 0.1, crit 1.0), PSI IO Stalled (warn 0.1%, crit 5%).
 
 #### Composite Health Overview pattern
-Both host dashboards open with a full-width **Host Health Overview** stat panel (type `stat`, `colorMode: background`, `graphMode: none`). Each cell is a separate instant query returning a scalar; per-field threshold overrides set the unit and warning/critical thresholds independently. No polystat plugin required — native Grafana stat panel in multi-query mode achieves the same traffic-light grid. The `default` dashboard provider scans subdirectories recursively, so specialised providers (`host`, `nodes`, `alerts`) will produce duplicate-UID warnings at startup; this is cosmetic and does not affect dashboard loading.
+Both host dashboards open with a full-width **Host Health Overview** polystat panel (type `grafana-polystat-panel` v2.1.16, installed via `GF_INSTALL_PLUGINS`). Each hexagon is a separate instant query; per-override threshold config sets the unit and warning/critical thresholds independently. The `default` dashboard provider scans subdirectories recursively, so specialised providers (`host`, `nodes`, `alerts`) will produce duplicate-UID warnings at startup; this is cosmetic and does not affect dashboard loading.
+
+**Polystat v2 panel schema essentials:**
+- `options.globalShape`: `"hexagon_pointed_top"` | `"circle"` | `"square"`
+- `options.globalOperator`: `"lastNotNull"` for current-value cells
+- `options.globalThresholdsConfig`: fallback thresholds array `[{color, state, value}]`
+- `options.overrideConfig.overrides`: per-metric array — each entry has `label` (matches `legendFormat`), `unitFormat`, `decimals`, `thresholds[]`
+- `fieldConfig`: set to `{"defaults": {}, "overrides": []}` — polystat does not use Grafana's fieldConfig thresholds
 
 ### 5. Alerting & Notifications
 Alerting is handled by Prometheus + Alertmanager, and Grafana alerting is provisioned to the same webhook receiver.
@@ -117,6 +124,7 @@ Alerting is handled by Prometheus + Alertmanager, and Grafana alerting is provis
 - **Loki "No data"**: Ensure Alloy is labeling logs correctly. Check `discovery.relabel` for logs in `yaml/alloy.yaml`.
 - **Alerts not firing**: Confirm Prometheus has loaded rules and Alertmanager is reachable from Prometheus (`alertmanager:9093`).
 - **Duplicate UID warnings at startup**: The `default` dashboard provider scans `/var/lib/grafana/dashboards` recursively, so dashboards mounted in subdirectories (`nodes/`, `alerts/`, `host/`) are found by both `default` and their specialised provider. Grafana logs `"the same UID is used more than once"` and `"no database write permissions"` for affected providers — this is cosmetic and dashboards load correctly. To silence it, add `allowUiUpdates: false` to specialised providers or restrict `default` to non-recursive scanning.
+- **Polystat plugin not rendering**: The plugin is installed via `GF_INSTALL_PLUGINS=grafana-polystat-panel` on the Grafana Deployment. If hexagons show "No data", verify instant queries (`"instant": true`) are set on all polystat targets and that `legendFormat` exactly matches the `label` in `overrideConfig.overrides`.
 
 ## Roadmap for Future Agents
 
