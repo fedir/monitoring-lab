@@ -85,6 +85,14 @@ data:
       editable: true
       options:
         path: /var/lib/grafana/dashboards/host
+    - name: 'pods'
+      orgId: 1
+      folder: 'Infrastructure'
+      type: file
+      disableDeletion: false
+      editable: true
+      options:
+        path: /var/lib/grafana/dashboards/pods
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -3309,6 +3317,222 @@ data:
     }
 
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: monitoring
+  name: grafana-dashboard-pods
+data:
+  pods-overview.json: |
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {},
+              "mappings": [],
+              "unit": "percentunit",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "#299c46", "value": null },
+                  { "color": "#ed8128", "value": 0.4 },
+                  { "color": "#f53636", "value": 0.9 }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+          "id": 1,
+          "options": {
+            "autoSizePolygons": true,
+            "globalOperator": "lastNotNull",
+            "globalShape": "hexagon_pointed_top",
+            "globalDisplayMode": "all",
+            "globalDecimals": 1,
+            "globalFillColor": "#299c46",
+            "globalThresholdsConfig": [
+              { "color": "#299c46", "state": 0, "value": null },
+              { "color": "#ed8128", "state": 1, "value": 0.4 },
+              { "color": "#f53636", "state": 2, "value": 0.9 }
+            ],
+            "overrideConfig": {
+              "overrides": [
+                {
+                  "label": ".*",
+                  "enabled": true,
+                  "operatorName": "lastNotNull",
+                  "unitFormat": "percentunit",
+                  "decimals": 1,
+                  "thresholds": [
+                    { "color": "#299c46", "state": 0, "value": null },
+                    { "color": "#ed8128", "state": 1, "value": 0.4 },
+                    { "color": "#f53636", "state": 2, "value": 0.9 }
+                  ]
+                }
+              ]
+            }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "sum(rate(container_cpu_usage_seconds_total{container!=\"\",container!=\"POD\"}[2m])) by (pod, namespace) / on(pod, namespace) group_left() label_replace(label_replace(sum(kube_pod_container_resource_limits{resource=\"cpu\",container!=\"\"}) by (exported_pod, exported_namespace), \"pod\", \"$1\", \"exported_pod\", \"(.*)\"), \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")",
+              "instant": true,
+              "legendFormat": "{{namespace}}/{{pod}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Pod CPU Usage (% of limit)",
+          "type": "grafana-polystat-panel"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {},
+              "mappings": [],
+              "unit": "percentunit",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "#299c46", "value": null },
+                  { "color": "#ed8128", "value": 0.4 },
+                  { "color": "#f53636", "value": 0.9 }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+          "id": 2,
+          "options": {
+            "autoSizePolygons": true,
+            "globalOperator": "lastNotNull",
+            "globalShape": "hexagon_pointed_top",
+            "globalDisplayMode": "all",
+            "globalDecimals": 1,
+            "globalFillColor": "#299c46",
+            "globalThresholdsConfig": [
+              { "color": "#299c46", "state": 0, "value": null },
+              { "color": "#ed8128", "state": 1, "value": 0.4 },
+              { "color": "#f53636", "state": 2, "value": 0.9 }
+            ],
+            "overrideConfig": {
+              "overrides": [
+                {
+                  "label": ".*",
+                  "enabled": true,
+                  "operatorName": "lastNotNull",
+                  "unitFormat": "percentunit",
+                  "decimals": 1,
+                  "thresholds": [
+                    { "color": "#299c46", "state": 0, "value": null },
+                    { "color": "#ed8128", "state": 1, "value": 0.4 },
+                    { "color": "#f53636", "state": 2, "value": 0.9 }
+                  ]
+                }
+              ]
+            }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "sum(container_memory_working_set_bytes{container!=\"\",container!=\"POD\"}) by (pod, namespace) / on(pod, namespace) group_left() label_replace(label_replace(sum(kube_pod_container_resource_limits{resource=\"memory\",container!=\"\"}) by (exported_pod, exported_namespace), \"pod\", \"$1\", \"exported_pod\", \"(.*)\"), \"namespace\", \"$1\", \"exported_namespace\", \"(.*)\")",
+              "instant": true,
+              "legendFormat": "{{namespace}}/{{pod}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Pod RAM Usage (% of limit)",
+          "type": "grafana-polystat-panel"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "fieldConfig": {
+            "defaults": {
+              "color": { "mode": "palette-classic" },
+              "custom": {},
+              "mappings": [],
+              "unit": "percentunit",
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  { "color": "#299c46", "value": null },
+                  { "color": "#ed8128", "value": 0.4 },
+                  { "color": "#f53636", "value": 0.9 }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
+          "id": 3,
+          "options": {
+            "autoSizePolygons": true,
+            "globalOperator": "lastNotNull",
+            "globalShape": "hexagon_pointed_top",
+            "globalDisplayMode": "all",
+            "globalDecimals": 1,
+            "globalFillColor": "#299c46",
+            "globalThresholdsConfig": [
+              { "color": "#299c46", "state": 0, "value": null },
+              { "color": "#ed8128", "state": 1, "value": 0.4 },
+              { "color": "#f53636", "state": 2, "value": 0.9 }
+            ],
+            "overrideConfig": {
+              "overrides": [
+                {
+                  "label": ".*",
+                  "enabled": true,
+                  "operatorName": "lastNotNull",
+                  "unitFormat": "percentunit",
+                  "decimals": 1,
+                  "thresholds": [
+                    { "color": "#299c46", "state": 0, "value": null },
+                    { "color": "#ed8128", "state": 1, "value": 0.4 },
+                    { "color": "#f53636", "state": 2, "value": 0.9 }
+                  ]
+                }
+              ]
+            }
+          },
+          "targets": [
+            {
+              "datasource": { "type": "prometheus", "uid": "prometheus" },
+              "editorMode": "code",
+              "expr": "1 - (node_filesystem_avail_bytes{fstype=~\"xfs|ext4|btrfs\"} / node_filesystem_size_bytes{fstype=~\"xfs|ext4|btrfs\"})",
+              "instant": true,
+              "legendFormat": "{{mountpoint}}",
+              "refId": "A"
+            }
+          ],
+          "title": "Node Filesystem Usage (% of capacity)",
+          "type": "grafana-polystat-panel"
+        }
+      ],
+      "refresh": "30s",
+      "schemaVersion": 39,
+      "tags": ["pods", "infrastructure", "kubernetes"],
+      "templating": { "list": [] },
+      "time": { "from": "now-15m", "to": "now" },
+      "timepicker": {},
+      "timezone": "browser",
+      "title": "Kubernetes Pods Overview",
+      "uid": "pods-overview",
+      "version": 1
+    }
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -3359,6 +3583,8 @@ spec:
               mountPath: /var/lib/grafana/dashboards/nodes
             - name: dashboards-host
               mountPath: /var/lib/grafana/dashboards/host
+            - name: dashboards-pods
+              mountPath: /var/lib/grafana/dashboards/pods
             - name: alerting
               mountPath: /etc/grafana/provisioning/alerting
       volumes:
@@ -3380,6 +3606,9 @@ spec:
         - name: dashboards-host
           configMap:
             name: grafana-dashboard-host
+        - name: dashboards-pods
+          configMap:
+            name: grafana-dashboard-pods
         - name: alerting
           configMap:
             name: grafana-alerting

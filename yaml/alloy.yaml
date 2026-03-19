@@ -171,6 +171,66 @@ data:
       }
     }
 
+    // Discover Kubernetes nodes for kubelet / cAdvisor scraping
+    discovery.kubernetes "nodes" {
+      role = "node"
+    }
+
+    // cAdvisor — container CPU & memory usage
+    discovery.relabel "cadvisor" {
+      targets = discovery.kubernetes.nodes.targets
+
+      rule {
+        replacement  = "kubernetes.default.svc:443"
+        target_label = "__address__"
+      }
+
+      rule {
+        source_labels = ["__meta_kubernetes_node_name"]
+        regex         = "(.+)"
+        replacement   = "/api/v1/nodes/$1/proxy/metrics/cadvisor"
+        target_label  = "__metrics_path__"
+      }
+    }
+
+    prometheus.scrape "cadvisor" {
+      targets           = discovery.relabel.cadvisor.output
+      scheme            = "https"
+      bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+      tls_config {
+        insecure_skip_verify = true
+      }
+      forward_to = [prometheus.remote_write.local.receiver]
+    }
+
+    // Kubelet — volume stats (kubelet_volume_stats_*)
+    discovery.relabel "kubelet" {
+      targets = discovery.kubernetes.nodes.targets
+
+      rule {
+        replacement  = "kubernetes.default.svc:443"
+        target_label = "__address__"
+      }
+
+      rule {
+        source_labels = ["__meta_kubernetes_node_name"]
+        regex         = "(.+)"
+        replacement   = "/api/v1/nodes/$1/proxy/metrics"
+        target_label  = "__metrics_path__"
+      }
+    }
+
+    prometheus.scrape "kubelet" {
+      targets           = discovery.relabel.kubelet.output
+      scheme            = "https"
+      honor_labels      = true
+      bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+      tls_config {
+        insecure_skip_verify = true
+      }
+      forward_to = [prometheus.remote_write.local.receiver]
+    }
+
 ---
 apiVersion: apps/v1
 kind: DaemonSet
