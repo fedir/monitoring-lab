@@ -1317,7 +1317,7 @@ data:
           "options": {
             "autoSizePolygons": true,
             "globalOperator": "lastNotNull",
-            "globalShape": "hexagon_pointed_top",
+            "globalShape": "rectangle",
             "globalDisplayMode": "all",
             "globalDecimals": 2,
             "globalFillColor": "#299c46",
@@ -2201,7 +2201,7 @@ data:
           "options": {
             "autoSizePolygons": true,
             "globalOperator": "lastNotNull",
-            "globalShape": "hexagon_pointed_top",
+            "globalShape": "rectangle",
             "globalDisplayMode": "all",
             "globalDecimals": 2,
             "globalFillColor": "#299c46",
@@ -3355,7 +3355,7 @@ data:
           "options": {
             "autoSizePolygons": true,
             "globalOperator": "lastNotNull",
-            "globalShape": "hexagon_pointed_top",
+            "globalShape": "rectangle",
             "globalDisplayMode": "all",
             "globalDecimals": 1,
             "globalFillColor": "#299c46",
@@ -3418,7 +3418,7 @@ data:
           "options": {
             "autoSizePolygons": true,
             "globalOperator": "lastNotNull",
-            "globalShape": "hexagon_pointed_top",
+            "globalShape": "rectangle",
             "globalDisplayMode": "all",
             "globalDecimals": 1,
             "globalFillColor": "#299c46",
@@ -3481,7 +3481,7 @@ data:
           "options": {
             "autoSizePolygons": true,
             "globalOperator": "lastNotNull",
-            "globalShape": "hexagon_pointed_top",
+            "globalShape": "rectangle",
             "globalDisplayMode": "all",
             "globalDecimals": 1,
             "globalFillColor": "#299c46",
@@ -3553,7 +3553,8 @@ spec:
     spec:
       containers:
         - name: grafana
-          image: grafana/grafana:10.4.1
+          image: localhost/monitoring-grafana:local
+          imagePullPolicy: Never
           ports:
             - containerPort: 3000
           resources:
@@ -3568,7 +3569,7 @@ spec:
               value: "true"
             - name: GF_AUTH_ANONYMOUS_ORG_ROLE
               value: "Admin"
-            - name: GF_INSTALL_PLUGINS
+            - name: GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS
               value: "grafana-polystat-panel"
           volumeMounts:
             - name: datasources

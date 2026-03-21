@@ -1,0 +1,5 @@
+FROM grafana/grafana:10.4.1
+
+COPY plugins/lab-polystat-brick-panel/dist /var/lib/grafana/plugins/grafana-polystat-panel
+
+ENV GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=grafana-polystat-panel
